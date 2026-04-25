@@ -416,6 +416,19 @@ The reviewer should produce:
 
 When an agent platform supports skills, AgentKit should provide an AgentKit skill that teaches agents how to use the repository's AgentKit setup.
 
+The skill is for agents using AgentKit inside a target repository. It is not the north-star product design for agents developing AgentKit itself.
+
+Therefore the skill should focus on operational value:
+
+- how AgentKit helps the current task
+- which commands to run and when
+- which docs to read before editing
+- when to ask the human for missing design
+- how to keep docs, checks, review, and closeout aligned
+- how to interpret lifecycle reminders
+
+The skill should not try to teach the full product philosophy, roadmap, or long-term architecture of AgentKit. Those belong in durable design docs such as this file, the workflow, implementation model, component docs, and roadmap.
+
 The skill should explain:
 
 - how to read `agentkit.yml`
@@ -798,6 +811,21 @@ A repository can contain a skill that teaches agents how to work in that specifi
 - review expectations
 
 The skill should not replace docs or checks. It should be the agent-facing guide that explains how to use them.
+
+The skill should be rich enough to shape another capable agent's behavior without relying on the original conversation. It should tell the agent the normal operating loop:
+
+1. Start or resume the task with AgentKit.
+2. Read the durable intent sources AgentKit returns.
+3. Ask for human design when the design surface is missing or ambiguous.
+4. Implement against tests and repo rules.
+5. Run checks and read lifecycle reminders.
+6. Request clean-context review when expected.
+7. Fix meaningful findings.
+8. Close the task as completed or blocked.
+
+For deeper product intent, the skill should point to the repository docs instead of restating them.
+
+Mock-agent adoption tests should be used to calibrate this surface. If a clean agent can read the skill and explain when to start, ask for design, run checks, request review, and close, then the skill is carrying useful operational knowledge. If the agent cannot read the skill because of runtime permissions, AgentKit should fail gracefully through CLI guidance and root docs, but the runtime integration should still grant read access to the generated skill.
 
 ## Relationship to Other Tools
 

@@ -7,6 +7,30 @@ description: Use AgentKit to orient coding agents, enforce repository-local main
 
 This repository uses AgentKit.
 
+## What AgentKit Gives You
+
+AgentKit keeps your work tied to durable repo intent. Use it to:
+
+- find the docs and components relevant to a task
+- remember the task's closeout gates
+- check docs impact and architecture rules
+- get lifecycle reminders while you work
+- ask for clean-context review before human attention
+- close the task as completed or blocked
+
+The skill is an operating guide. For deeper product or architecture intent, read the durable docs that AgentKit returns.
+
+## Normal Operating Loop
+
+1. Start or resume the task with `agentkit start`.
+2. Read the durable intent sources in the output.
+3. If design is missing or ambiguous for product behavior, API, data model, workflow, architecture, or state transitions, ask the human before implementing that part.
+4. Implement against tests and the repo's architecture rules.
+5. Run `agentkit check` and read any lifecycle reminder it prints.
+6. Run `agentkit review-guidance` and request clean-context review when expected.
+7. Fix meaningful reviewer findings.
+8. Run `agentkit close --review-complete`, or close as blocked with a recorded human question.
+
 ## Start Of Task
 
 Run:
@@ -15,10 +39,18 @@ Run:
 agentkit start
 ```
 
+`start` writes repository-local task state under `.agentkit/`. In a read-only audit, do not run `start`; read this skill and use read-only commands such as `agentkit status` or `agentkit remind` instead.
+
 If you know the component, run:
 
 ```text
 agentkit start --component <name>
+```
+
+After discussion clarifies the task, preserve the focus:
+
+```text
+agentkit start --task "<refined task>" --focus-note "<human-approved focus>" --focus-doc <path>
 ```
 
 Configured components: cli, configuration, docs, governance, guidance
@@ -33,6 +65,10 @@ agentkit intent-guidance --component <name> --change-type <type>
 
 Write the actual design content yourself. AgentKit tells you where it belongs.
 
+Useful change-type values include `architecture`, `data_model`, `public_api`, `orchestration`, `workflow`, `tests`, and `docs`.
+
+For docs-only wording tasks, ask the human for design only when the wording changes product meaning, command semantics, public behavior, workflow expectations, or accepted terminology. For local copyedits that preserve meaning, proceed with focused docs checks and review expectations from AgentKit.
+
 ## Before Review
 
 Run:
@@ -43,6 +79,10 @@ agentkit review-guidance
 ```
 
 If review is expected, spawn or request a clean-context reviewer with the guidance AgentKit returns.
+
+Do not treat review as a transcript storage task. AgentKit only needs the main agent to acknowledge that the review loop was completed for the current diff. If review reveals durable design, risk, or testing knowledge, record that in the repository docs.
+
+For low-risk docs-only wording changes, review may still be expected by local policy. Use `agentkit review-guidance` to decide. If review is not required and the change is truly low risk, close with the local skip-review path only when AgentKit allows it.
 
 ## Lifecycle Reminders
 
@@ -74,3 +114,5 @@ If blocked on human input, run:
 ```text
 agentkit close --blocked-question "..."
 ```
+
+Use blocked close when continuing would require an unsupported assumption. Include the human question clearly.

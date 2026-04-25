@@ -100,6 +100,7 @@ The task record should capture:
 - task todo
 - durable human intent source paths
 - focus docs for this task
+- focus notes from the human-agent discussion
 - likely affected components
 - likely code areas
 - expected checks
@@ -124,13 +125,13 @@ The agent runs `agentkit start` early with the initial task todo.
 
 After discussion or investigation clarifies the task, the agent updates the task context.
 
-The MVP path is to rerun `agentkit start` for the current task with the refined task todo, plan, and focus notes. The current CLI uses the default `current` task id; a future version should expose explicit arguments such as:
+The current path is to rerun `agentkit start` for the current task with the refined task todo, plan, focus docs, and focus notes. The CLI uses the default `current` task id and supports explicit focus arguments such as:
 
 ```text
-agentkit start --task-id current --task "<refined task todo>" --focus-note "<human-approved focus>"
+agentkit start --task "<refined task todo>" --focus-note "<human-approved focus>" --focus-doc docs/components/example/design.md
 ```
 
-Until those explicit flags exist, the implementing agent must preserve refined focus in the task plan text or in the relevant durable docs, then rerun `agentkit start` so the current task state reflects the updated context.
+The implementing agent should preserve refined focus in the task state and, when the focus changes durable design intent, in the relevant docs.
 
 This works well when the agent needs AgentKit's orientation before the design is fully clear.
 
@@ -148,6 +149,7 @@ This state is the source for lifecycle reminders. At any moment, AgentKit should
 
 - what task is open
 - which durable intent sources matter
+- which focus docs and focus notes the agent should keep in working memory
 - which gates have been satisfied
 - which gates are still missing
 - whether the task is blocked with a recorded human question
@@ -337,6 +339,21 @@ Reminder behavior must be stateful:
 - changed fingerprints invalidate old receipts
 
 `watch` should not invent its own policy. It should call the same status/reminder logic used by `check`, `status`, and `remind`.
+
+## 6.5. Skills As Agent Onboarding
+
+The generated AgentKit skill is the operating manual for agents using AgentKit in a repository.
+
+It should help a capable agent answer:
+
+- What should I run at task start?
+- Which durable docs should I read?
+- When should I stop and ask the human for design?
+- How do I use `check`, `status`, `remind`, and `watch` during work?
+- When do I request clean-context review?
+- How do I close as completed or blocked?
+
+It should not try to include all product strategy, roadmap, or implementation rationale for AgentKit itself. Agents developing AgentKit should read the durable design docs. Agents using AgentKit should get a concise, task-oriented protocol from the skill.
 
 ## 7. Human Attention Policy
 

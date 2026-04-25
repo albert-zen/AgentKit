@@ -36,6 +36,8 @@ def main(argv: list[str] | None = None) -> None:
     start_parser.add_argument("--path", action="append", default=[])
     start_parser.add_argument("--task", default="")
     start_parser.add_argument("--plan", default="")
+    start_parser.add_argument("--focus-note", action="append", default=[])
+    start_parser.add_argument("--focus-doc", action="append", default=[])
 
     orient_parser = subparsers.add_parser("orient")
     orient_parser.add_argument("--component", action="append", default=[])
@@ -82,7 +84,17 @@ def main(argv: list[str] | None = None) -> None:
         if args.command == "init":
             print(init_repo(repo, force=args.force))
         elif args.command == "start":
-            print(start_task(repo, component_names=args.component, paths=args.path, task=args.task, plan=args.plan))
+            print(
+                start_task(
+                    repo,
+                    component_names=args.component,
+                    paths=args.path,
+                    task=args.task,
+                    plan=args.plan,
+                    focus_notes=args.focus_note,
+                    focus_docs=args.focus_doc,
+                )
+            )
         elif args.command == "orient":
             print(orient(repo, component_names=args.component, paths=args.path, task=args.task))
         elif args.command == "intent-guidance":

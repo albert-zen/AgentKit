@@ -13,6 +13,7 @@ Guidance tests should use small temporary repositories and assert that AgentKit 
 - hook installation behavior
 - status and reminder output
 - watch once output
+- generated skill operating-loop guidance
 
 The tests should not assert exact prose unless the wording is part of the contract.
 
@@ -54,6 +55,18 @@ Reminder tests should eventually verify:
 - stale receipts produce actionable missing-gate messages
 - `check`, `status`, `remind`, and `watch` derive reminders from the same sampler
 - reminder rendering does not change task state beyond the normal receipt side effects of the command that displays it
+
+Skill tests should verify that generated skills teach:
+
+- the normal AgentKit operating loop
+- when to ask the human for design
+- command side effects, especially that `start` writes task state
+- common `intent-guidance` change types
+- docs-only wording task policy
+- review acknowledgement without storing reviewer transcripts
+- status/remind/watch usage
+
+Mock-agent adoption tests should ask a clean agent to use the generated skill for a small representative task and report the workflow it would follow. Useful failures include missing command side-effect warnings, unclear docs-only review policy, and unavailable skill file access in the agent runtime.
 
 Watcher tests should eventually verify:
 

@@ -11,6 +11,7 @@ The guidance component gives the implementing agent practical next steps:
 - whether docs may be stale
 - what review guidance should be used
 - how to start and close a task responsibly
+- how to learn the using-AgentKit operating loop from the generated skill
 
 ## Owned Concepts
 
@@ -28,6 +29,21 @@ The guidance component gives the implementing agent practical next steps:
 ## Boundary
 
 Guidance should not replace semantic reasoning by the LLM. It should route, remind, template, and check.
+
+Generated guidance should distinguish two audiences:
+
+- agents using AgentKit need a concise operating protocol through the generated skill
+- agents developing AgentKit need the durable product and component docs
+
+The generated skill should therefore explain how AgentKit helps the current task, when to run commands, when to ask for human design, and how to handle review and closeout. It should point to deeper docs instead of restating the full product roadmap.
+
+The skill should also explain command side effects and common ambiguity points:
+
+- `agentkit start` writes task state
+- `agentkit status` and `agentkit remind` are safe status/reminder reads
+- common `intent-guidance` change types
+- docs-only wording tasks usually do not need new product design unless they change meaning or command semantics
+- review completion is an acknowledgement, not transcript storage
 
 ## Task Lifecycle Guidance
 
@@ -83,6 +99,8 @@ Current implementation modules:
 - `receipts.py` reads and writes receipt files.
 - `lifecycle.py` evaluates task state, receipts, fingerprints, missing gates, and reminder text.
 - `watch.py` delivers reminder text in a local loop.
+
+Near-term task-state improvements should continue from the first focus-context support. `start` can record focus notes and focus docs; later task updates should add planned checks, changed scope, and task history beyond the single default `current` task.
 
 ## Hook Guidance
 

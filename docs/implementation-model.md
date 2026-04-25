@@ -87,6 +87,7 @@ Outputs:
 - task id
 - durable intent source paths
 - docs to keep in working memory
+- focus docs and focus notes
 - affected components
 - likely code areas
 - suggested checks
@@ -100,6 +101,8 @@ Side effect:
 `start` should reuse the same component and docs analysis as `orient`, but it persists enough state for `close` to evaluate whether the task was responsibly finished.
 
 The agent may run `start` after a design discussion, or run it earlier and later update the task context once the human-agent discussion clarifies the focus.
+
+The current task state should preserve `focus_notes` and `focus_docs` so another agent can recover the task's human-approved emphasis without reading the original chat.
 
 ## `agentkit orient`
 
@@ -302,7 +305,11 @@ Blocked close requires an existing task state from `agentkit start`. It may reco
 
 The close command should not create an infinite loop. It should use receipts keyed by a diff fingerprint. If the diff has not changed, AgentKit should not repeat identical warnings after they have been acknowledged. If the diff changes, relevant check and review receipts become stale.
 
-The MVP receipt model starts with check receipts written by successful `agentkit check` runs. Review receipts may begin as an explicit close-time assertion such as `agentkit close --review-complete`, with richer reviewer-result parsing added later. Check and review acknowledgements must be keyed to the current diff fingerprint so they cannot be reused after later commits or edits.
+The MVP receipt model starts with check receipts written by successful `agentkit check` runs. Review completion begins as an explicit close-time acknowledgement such as `agentkit close --review-complete`. Check and review acknowledgements must be keyed to the current diff fingerprint so they cannot be reused after later commits or edits.
+
+AgentKit should not require storing reviewer transcripts, multi-pass review logs, or reviewer findings as first-class state. The main agent owns the review loop and is responsible for fixing meaningful findings. If a finding, decision, or unresolved issue is important for future maintainability, the agent should record it in the repository documentation system rather than in an AgentKit-specific review database.
+
+Future versions may improve the review acknowledgement shape, but the product should stay lightweight: AgentKit reminds, gates, and records that review was completed for the current fingerprint; the repo docs carry durable design or risk knowledge.
 
 ## `agentkit status` / `agentkit remind`
 
@@ -411,7 +418,7 @@ AgentKit should not need to spawn the reviewer in the MVP. It tells the main age
 
 Generate or update a repository-local AgentKit skill.
 
-The skill should teach agents:
+The skill should teach agents using AgentKit in the current repository:
 
 - how to run AgentKit commands
 - where docs live
@@ -421,6 +428,8 @@ The skill should teach agents:
 - what the local architecture rules mean
 
 This is one of the main ways AgentKit gives value to agents without building a large platform.
+
+The generated skill is an operating guide, not a developer design doc. It should contain enough task protocol for a capable agent to use AgentKit well, while linking out to durable docs for product philosophy, component details, and long-term roadmap.
 
 ## Configuration Model
 

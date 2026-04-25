@@ -240,6 +240,14 @@ Implemented baseline:
 - `agentkit remind`
 - `agentkit watch --once` and continuous local watch loop
 
+Next improvements:
+
+- richer task updates for focus docs, focus notes, planned checks, and changed scope
+- clearer task history beyond the single default `current` task
+- generated skills that teach the full using-AgentKit protocol, not only command names
+- mock-agent adoption tests that verify a clean agent can use the skill and CLI without inheriting chat context
+- runtime guidance for ensuring agents can read the generated skill file
+
 Success criteria:
 
 - A new repo can run `agentkit init` and receive a clear maintainability readiness report.

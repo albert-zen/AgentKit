@@ -14,6 +14,7 @@ The first test slice covers command functions directly. Process-level tests can 
 Lifecycle command coverage should verify:
 
 - `start` writes task state and reports durable intent sources
+- `start` records focus notes and focus docs
 - `status` reports open tasks, missing gates, stale receipts, and blocked questions
 - `remind` reports the next action derived from the same lifecycle state as `status`
 - `check` can include lifecycle reminders without mutating task state beyond its normal check receipt

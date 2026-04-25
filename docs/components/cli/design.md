@@ -38,11 +38,15 @@ The CLI should stay thin. It should parse arguments and delegate behavior to com
 
 `start` captures durable task context and writes a task state file. `close` verifies whether the task is completed, still needs work, or is blocked on a recorded human question.
 
+`start` should accept focus context such as `--focus-note` and `--focus-doc` so agents can persist the human-approved emphasis of a task after discussion.
+
 `close` accepts `--review-complete` after a required review loop and `--skip-review-reason` for low-risk work where review is intentionally skipped.
 
 `status` and `remind` expose the current lifecycle state without changing it. `status` should print facts about open tasks, missing gates, stale receipts, and blocked handoffs. `remind` should print agent-facing next actions derived from those facts.
 
 `check` may include lifecycle reminders in its output, but the CLI should still route status/reminder computation through shared guidance logic instead of implementing reminder policy itself.
+
+`close --review-complete` is an acknowledgement by the implementing agent that the required review loop was completed for the current diff and meaningful findings were handled. It is not a command for storing reviewer transcripts.
 
 ## Hook Commands
 

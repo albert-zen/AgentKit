@@ -18,6 +18,8 @@ class LifecycleSample:
     open_changes: tuple[str, ...]
     missing_gates: tuple[str, ...]
     next_actions: tuple[str, ...]
+    focus_notes: tuple[str, ...] = ()
+    focus_docs: tuple[str, ...] = ()
     blocked_question: str | None = None
 
     @property
@@ -44,6 +46,8 @@ def sample_lifecycle(repo: Path, task_id: str | None = None) -> LifecycleSample:
 
     status = str(state.get("status") or "open")
     task = str(state.get("task") or "")
+    focus_notes = tuple(str(item) for item in state.get("focus_notes", []) or [])
+    focus_docs = tuple(str(item) for item in state.get("focus_docs", []) or [])
     stored_fingerprint = state.get("diff_fingerprint")
     stale_closed_state = bool(current_changes and stored_fingerprint and stored_fingerprint != current_fingerprint)
     if status in {"completed", "blocked"} and stale_closed_state:
@@ -59,6 +63,8 @@ def sample_lifecycle(repo: Path, task_id: str | None = None) -> LifecycleSample:
                 "Run `agentkit start --task \"...\"` for the new work, or restore the previous diff before relying on the closed state.",
                 "If the new change cannot continue without human input, close as blocked with a recorded question.",
             ),
+            focus_notes=focus_notes,
+            focus_docs=focus_docs,
             blocked_question=str(state.get("blocked_question") or "") if status == "blocked" else None,
         )
     if status == "completed":
@@ -70,6 +76,8 @@ def sample_lifecycle(repo: Path, task_id: str | None = None) -> LifecycleSample:
             open_changes=current_changes,
             missing_gates=(),
             next_actions=("No action needed. This task is completed.",),
+            focus_notes=focus_notes,
+            focus_docs=focus_docs,
         )
     if status == "blocked":
         question = str(state.get("blocked_question") or "")
@@ -81,6 +89,8 @@ def sample_lifecycle(repo: Path, task_id: str | None = None) -> LifecycleSample:
             open_changes=current_changes,
             missing_gates=(),
             next_actions=("Wait for human input before continuing this task.",),
+            focus_notes=focus_notes,
+            focus_docs=focus_docs,
             blocked_question=question,
         )
 
@@ -109,6 +119,8 @@ def sample_lifecycle(repo: Path, task_id: str | None = None) -> LifecycleSample:
         open_changes=current_changes,
         missing_gates=tuple(missing),
         next_actions=tuple(dict.fromkeys(actions)),
+        focus_notes=focus_notes,
+        focus_docs=focus_docs,
     )
 
 
@@ -116,6 +128,8 @@ def render_status(sample: LifecycleSample) -> str:
     parts = [
         section("Lifecycle Status", [sample.state]),
         section("Task", [sample.task or sample.task_id]),
+        section("Focus Docs", bullet(sample.focus_docs)),
+        section("Focus Notes", bullet(sample.focus_notes)),
         section("Diff Fingerprint", [sample.diff_fingerprint]),
         section("Open Changes", bullet(sample.open_changes)),
         section("Missing Gates", bullet(sample.missing_gates)),

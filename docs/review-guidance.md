@@ -58,7 +58,9 @@ Before requesting review, the implementing agent should:
 7. Note docs updates or explain why none were needed.
 8. Ask AgentKit for review guidance.
 9. Spawn or request a clean-context reviewer with that guidance when review is expected.
-10. Record the review result so `agentkit close` can verify the review loop.
+10. Fix meaningful reviewer findings.
+11. Record durable design decisions, risks, or unresolved questions in the repository docs when they matter for future maintainability.
+12. Acknowledge the completed review loop with `agentkit close --review-complete`.
 
 The implementing agent should not ask for human review while obvious test failures, architecture lint failures, or stale-doc warnings remain unresolved.
 
@@ -166,7 +168,11 @@ The implementing agent should fix meaningful findings before involving the human
 
 One review pass is not a loop. A review loop requires at least one review pass, a fix pass, and a second review pass after the fixes.
 
-`agentkit close` should treat a missing review loop as unfinished work when review is required. If the task is blocked before review can happen, the agent should record the blocking human question and close the task as blocked rather than silently ending.
+`agentkit close` should treat a missing review loop as unfinished work when review is required. The required close signal is an acknowledgement by the implementing agent that the review loop happened for the current diff and meaningful findings were handled. AgentKit does not need to store reviewer transcripts or multi-pass finding logs as first-class state.
+
+If reviewer findings create durable product, architecture, testing, or risk knowledge, the implementing agent should record that knowledge in the repository documentation system. AgentKit's job is to remind and gate; the docs carry long-lived intent.
+
+If the task is blocked before review can happen, the agent should record the blocking human question and close the task as blocked rather than silently ending.
 
 If review cannot be performed, the implementing agent must not mark the task completed. It should record why review could not happen, preserve the current state, ask the human a concrete question, and run `agentkit close --blocked-question "..."`.
 
@@ -187,7 +193,7 @@ AgentKit should support the review loop by generating guidance:
 
 AgentKit should also remind the implementing agent when review is expected.
 
-Optional: AgentKit may generate a review context summary if the project wants a durable handoff artifact or needs to send the handoff to an external system.
+Optional: AgentKit may generate a review context summary if the project wants a durable handoff artifact or needs to send the handoff to an external system. This should stay optional and should not turn AgentKit into a review transcript database.
 
 ## Maintenance Checks
 

@@ -40,6 +40,61 @@ def test_start_task_writes_state_with_durable_sources(tmp_path: Path) -> None:
     assert '"status": "open"' in state.read_text(encoding="utf-8")
 
 
+def test_start_task_records_focus_context(tmp_path: Path) -> None:
+    import json
+
+    init_repo(tmp_path)
+
+    output = start_task(
+        tmp_path,
+        component_names=["core"],
+        task="implement core flow",
+        focus_notes=["Preserve the existing CLI flow"],
+        focus_docs=["docs/workflow.md"],
+    )
+
+    state = json.loads((tmp_path / ".agentkit" / "tasks" / "current.json").read_text(encoding="utf-8"))
+    assert "Focus Notes" in output
+    assert "Preserve the existing CLI flow" in output
+    assert state["focus_notes"] == ["Preserve the existing CLI flow"]
+    assert state["focus_docs"] == ["docs/workflow.md"]
+
+
+def test_start_task_uses_focus_doc_for_component_discovery(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    (tmp_path / "docs" / "components" / "cli").mkdir(parents=True)
+    (tmp_path / "docs" / "components" / "cli" / "design.md").write_text("# CLI\n", encoding="utf-8")
+    (tmp_path / "agentkit.yml").write_text(
+        """
+version: 1
+docs:
+  design: docs/design.md
+  workflow: docs/workflow.md
+components:
+  cli:
+    description: Command routing.
+    code:
+      - src/agentkit/cli.py
+    docs:
+      - docs/components/cli/design.md
+layers: {}
+review:
+  require_for:
+    - cli
+""",
+        encoding="utf-8",
+    )
+
+    output = start_task(
+        tmp_path,
+        task="refine wording",
+        focus_docs=["docs/components/cli/design.md"],
+    )
+
+    assert "cli: Command routing." in output
+    assert "Review Expected\nyes" in output
+
+
 def test_close_task_reports_needs_work_for_open_changes(tmp_path: Path) -> None:
     import subprocess
 
@@ -110,12 +165,20 @@ def test_close_task_requires_check_receipt(tmp_path: Path) -> None:
 
 def test_status_reports_missing_lifecycle_gates(tmp_path: Path) -> None:
     init_repo(tmp_path)
-    start_task(tmp_path, component_names=["core"], task="implement core flow")
+    start_task(
+        tmp_path,
+        component_names=["core"],
+        task="implement core flow",
+        focus_notes=["Keep CLI reminders concise"],
+        focus_docs=["docs/workflow.md"],
+    )
 
     output = status_task(tmp_path)
 
     assert "Lifecycle Status" in output
     assert "needs_work" in output
+    assert "docs/workflow.md" in output
+    assert "Keep CLI reminders concise" in output
     assert "Missing Gates" in output
     assert "Run `agentkit check`" in output
 
@@ -355,9 +418,15 @@ def test_generate_skill_includes_lifecycle_commands(tmp_path: Path) -> None:
     generate_skill(tmp_path)
 
     skill = (tmp_path / ".codex" / "skills" / "agentkit" / "SKILL.md").read_text(encoding="utf-8")
+    assert "Normal Operating Loop" in skill
+    assert "ask the human" in skill
+    assert "start` writes repository-local task state" in skill
+    assert "architecture`, `data_model`, `public_api`" in skill
+    assert "docs-only wording tasks" in skill
     assert "agentkit start" in skill
     assert "agentkit status" in skill
     assert "agentkit remind" in skill
+    assert "review loop was completed" in skill
     assert "agentkit close" in skill
 
 
