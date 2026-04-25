@@ -273,12 +273,11 @@ Required signals:
 - task was started
 - checks passed for the current diff fingerprint
 - docs impact was addressed
-- required review loop was completed
-- low-risk work that does not require review has an explicit skip reason
+- required review loop was completed, or a low-risk review skip reason was explicitly recorded
 - no blocking human question remains
 - local git policy is satisfied
 
-If review is required but cannot be performed, the task should close as `blocked`, not `completed`.
+If review is required but cannot be performed and the work is not low-risk enough to justify a skip reason, the task should close as `blocked`, not `completed`.
 
 ### `needs_work`
 

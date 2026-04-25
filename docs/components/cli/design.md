@@ -43,7 +43,7 @@ The CLI should stay thin. It should parse arguments and delegate behavior to com
 
 `start` should accept focus context such as `--focus-note` and `--focus-doc` so agents can persist the human-approved emphasis of a task after discussion.
 
-`close` accepts `--review-complete` after a required review loop and `--skip-review-reason` for low-risk work where review is intentionally skipped.
+`close` accepts `--review-complete` after a required review loop and `--skip-review-reason` as an explicit low-risk fallback where review is intentionally skipped.
 
 `status` and `remind` expose the current lifecycle state without changing it. `status` should print facts about open tasks, missing gates, stale receipts, and blocked handoffs. `remind` should print agent-facing next actions derived from those facts.
 

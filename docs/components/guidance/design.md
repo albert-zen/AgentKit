@@ -74,7 +74,7 @@ Closeout should avoid noisy loops by using state:
 - successful `agentkit check` writes a check receipt for the current fingerprint
 - `agentkit close` requires that check receipt before completing
 - review-required tasks need an explicit review-complete signal
-- skip reasons are only valid when review is not required for low-risk work
+- skip reasons are valid as an explicit low-risk fallback for the current diff fingerprint
 - unchanged diffs should not repeat identical acknowledged warnings forever
 - blocked tasks with recorded human questions should wait for new input
 

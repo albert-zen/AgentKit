@@ -35,7 +35,7 @@ Examples:
 - bug fixes with broad blast radius
 - changes where the implementing agent made important assumptions
 
-Review can be skipped for low-risk changes if the implementing agent records why.
+Review can be skipped for low-risk changes if the implementing agent records why. A skip reason is an explicit closeout fallback: it may satisfy the review gate when the agent can explain why a full clean-context review would add little value for the current diff.
 
 Examples:
 
@@ -60,7 +60,7 @@ Before requesting review, the implementing agent should:
 9. Spawn or request a clean-context reviewer with that guidance when review is expected.
 10. Fix meaningful reviewer findings.
 11. Record durable design decisions, risks, or unresolved questions in the repository docs when they matter for future maintainability.
-12. Acknowledge the completed review loop with `agentkit close --review-complete`.
+12. Acknowledge the completed review loop with `agentkit close --review-complete`, or record the low-risk fallback with `agentkit close --skip-review-reason "..."`.
 
 The implementing agent should not ask for human review while obvious test failures, architecture lint failures, or stale-doc warnings remain unresolved.
 

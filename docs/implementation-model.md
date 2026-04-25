@@ -293,7 +293,7 @@ Inputs:
 
 - task id, optional if there is only one open task
 - blocked question, optional
-- skip reason for low-risk work where review is not required, optional
+- skip reason for low-risk work where review is intentionally skipped, optional
 - validation summary, optional
 - review-complete flag, optional after the review loop has completed
 

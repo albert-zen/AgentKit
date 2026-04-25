@@ -146,7 +146,7 @@ If review is expected, spawn or request a clean-context reviewer with the guidan
 
 Do not treat review as a transcript storage task. AgentKit only needs the main agent to acknowledge that the review loop was completed for the current diff. If review reveals durable design, risk, or testing knowledge, record that in the repository docs.
 
-For low-risk docs-only wording changes, review may still be expected by local policy. Use `agentkit review-guidance` to decide. If review is not required and the change is truly low risk, close with the local skip-review path only when AgentKit allows it.
+For low-risk docs-only wording changes, review may still be expected by local policy. Use `agentkit review-guidance` to decide. If the change is truly low risk, close with `agentkit close --skip-review-reason "..."` only when AgentKit allows it.
 
 ## Lifecycle Reminders
 
