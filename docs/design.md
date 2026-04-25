@@ -248,14 +248,32 @@ AgentKit provides:
 
 AgentKit should treat agent work as an explicit task lifecycle.
 
+### 0. Repository Initialization
+
+At repository setup time, the agent runs `agentkit init`.
+
+The purpose of `init` is not only to create files. It should instruct the agent to improve the repository's long-term maintainability by configuring:
+
+- documentation structure
+- component-to-doc mappings
+- architecture rules
+- durable intent locations
+- local skills
+- deterministic hooks
+- project-specific links and conventions
+
+AgentKit should recommend a standard documentation system, while allowing the repository to configure its own docs, links, and hooks.
+
 ### 1. Start
 
 At task start, the implementing agent runs `agentkit start`.
 
 The start command should create or update a lightweight task record that captures:
 
+- the task todo or task statement
 - durable human intent source paths
 - docs the agent should keep in working memory
+- task focus notes from the human-agent discussion
 - likely affected components
 - likely code areas
 - planned validation commands
@@ -264,6 +282,8 @@ The start command should create or update a lightweight task record that capture
 - the agent's current implementation plan, if one exists
 
 `agentkit start` should build on `orient`; it should not replace the agent's own planning ability. Its job is to make the task's durable context explicit and recoverable.
+
+The human and agent may discuss first and then start the task, or start early and refine the task focus later. Either way, the task's important intent and focus must be recorded before closeout.
 
 ### 2. Work
 
@@ -292,6 +312,8 @@ The close command checks whether the task has been responsibly closed:
 - the final state is traceable to durable intent
 
 If the task is blocked on human input, `agentkit close` should still allow closure after the agent records the question, current state, and next action needed from the human.
+
+Close may end as `completed`, `needs_work`, or `blocked`. A blocked close is a traceable fallback path, not a bypass. It requires an existing task and a recorded human question.
 
 ### 4. Reminder
 
@@ -728,7 +750,11 @@ AgentKit should support a standard implementation-review loop:
 7. The implementing agent requests or spawns a clean-context reviewer when the environment supports it.
 8. Clean reviewer agent inspects the result.
 9. Implementing agent fixes meaningful findings.
-10. Human reviews only the remaining judgment calls.
+10. Implementing agent requests a second clean-context review after fixes.
+11. Implementing agent repeats review -> fix -> review until no meaningful findings remain, or only low-value residual risks remain.
+12. Human reviews only the remaining judgment calls.
+
+One review pass is not a review loop. For non-trivial reviewed work, AgentKit should require at least review -> fix -> second review before normal closeout.
 
 ## Skill Strategy
 

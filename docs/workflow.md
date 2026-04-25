@@ -4,362 +4,360 @@ Status: Draft
 
 ## Purpose
 
-This document describes the intended way a human developer and coding agents work together in an AgentKit-enabled repository.
+This document defines the intended lifecycle for using AgentKit in an agent-built repository.
 
-The workflow is intentionally lighter than an industrial automation harness. It assumes a human may still sit at the computer and collaborate with agents directly, while still borrowing the discipline of automated systems: durable intent, tests, checks, review loops, and traceable decisions.
+AgentKit is not only a set of checks. It is a workflow harness that keeps agent work tied to durable human intent, repository-specific maintainability rules, and explicit closeout gates.
+
+The workflow has four stages:
+
+1. Repository initialization
+2. Task start
+3. Task execution and checks
+4. Exception handling and feedback
+
+Only after a task reaches a valid closed state should the agent end the work.
 
 ## Workflow Summary
 
 ```text
-External requirement
-  -> agentkit start
-  -> human-agent design discussion
-  -> intent recording in repository docs
-  -> derived tests and checks
-  -> implementation, preferably TDD
-  -> docs and maintenance updates
-  -> clean-context review
-  -> fixes
+Repository setup
+  -> agentkit init
+  -> configure maintainability docs, links, rules, hooks, and skills
+
+Concrete task
+  -> human-agent discussion and/or agentkit start
+  -> record task intent, todo, focus docs, code scope, and plan
+  -> implement against durable intent
+  -> run tests, AgentKit checks, docs-impact, and review loop
   -> agentkit close
-  -> human attention
+  -> completed, needs_work, or blocked with human question
 ```
 
-## 0. Task Start
+## 1. Repository Initialization
 
-When an agent begins a task in an AgentKit-enabled repository, it should run:
+Initialization happens at the repository level.
+
+The command is:
 
 ```text
-agentkit start
+agentkit init
 ```
 
-The start step should establish the task's durable context:
+The purpose of `init` is to tell the agent:
 
-- human intent source docs
-- docs to keep in working memory
-- affected components
+- this repository should become more maintainable for long-running agent work
+- human intent must live in durable repository artifacts
+- the repo should have a legible documentation system
+- code areas should map to docs and ownership boundaries
+- deterministic checks and hooks should encode important constraints
+
+`init` should recommend a standard structure, while allowing the project to configure its own docs, links, rules, and hooks.
+
+Recommended initialized surfaces:
+
+- `AGENTS.md`
+- `agentkit.yml`
+- `docs/design.md`
+- `docs/workflow.md`
+- `docs/architecture/`
+- `docs/components/<component>/`
+- `docs/decisions/`
+- `docs/specs/active/`
+- `docs/specs/completed/`
+- `.codex/skills/agentkit/SKILL.md`
+- optional Git hooks through `agentkit install-hooks`
+
+The initialized repo should answer:
+
+- Where does human intent live?
+- Which docs are authoritative?
+- Which code paths belong to which components?
+- Which architecture rules are enforced?
+- Which checks must agents run?
+- Which hooks are installed automatically by Git?
+- How should future agents start and close tasks?
+
+The `init` command should not pretend to fully configure the repo by itself. Its job is to guide the agent to complete the maintainability setup.
+
+If the repository already has a documentation system, AgentKit should adapt to it through configuration instead of forcing a full replacement.
+
+## 2. Task Start
+
+Task start happens for each concrete unit of work.
+
+The command is:
+
+```text
+agentkit start --task "<task todo>"
+```
+
+Every task should have a task todo or task statement.
+
+`start` creates or updates the task record that later gates `close`.
+
+The task record should capture:
+
+- task todo
+- durable human intent source paths
+- focus docs for this task
+- likely affected components
 - likely code areas
-- expected validation commands
+- expected checks
 - review expectation
 - design gaps or blocked decisions
-- current implementation plan, when available
+- implementation plan, when available
+- known human-approved constraints
 
-This gives the agent a stable reference it can return to during long-running work. It also gives AgentKit enough state to tell whether the task was closed responsibly.
+There are two valid ways to use `start`.
 
-## 1. Requirement Intake and Design Discussion
+### Option A: Discuss First, Then Start
 
-The work usually starts outside the repository.
+The human and agent first discuss the requirement, design direction, risks, and implementation plan.
+
+Then the agent runs `agentkit start` with the agreed task todo and plan.
+
+This works well when the task needs design thinking before any execution begins.
+
+### Option B: Start First, Then Refine Focus
+
+The agent runs `agentkit start` early with the initial task todo.
+
+After discussion or investigation clarifies the task, the agent updates the task context.
+
+The MVP path is to rerun `agentkit start` for the current task with the refined task todo, plan, and focus notes. The current CLI uses the default `current` task id; a future version should expose explicit arguments such as:
+
+```text
+agentkit start --task-id current --task "<refined task todo>" --focus-note "<human-approved focus>"
+```
+
+Until those explicit flags exist, the implementing agent must preserve refined focus in the task plan text or in the relevant durable docs, then rerun `agentkit start` so the current task state reflects the updated context.
+
+This works well when the agent needs AgentKit's orientation before the design is fully clear.
+
+AgentKit must support the second path because agents often learn important scope information after the first pass.
+
+The important rule is this:
+
+Human intent and task focus must be written into a durable task context before implementation closes. They cannot live only in chat memory.
+
+## 3. Task Execution And Checks
+
+During execution, the agent implements against the task record and the durable docs it references.
+
+The agent should repeatedly ask:
+
+- Am I still implementing the recorded task todo?
+- Are the focus docs still the right source of truth?
+- Did the affected components change?
+- Did I introduce a new design decision?
+- Did this change require docs updates?
+- Do tests and checks still cover the intended behavior?
+
+For behavioral work, the preferred implementation style is test-first or test-anchored development.
+
+Recommended execution sequence:
+
+1. Read durable intent sources and focus docs.
+2. Record missing design questions before implementing ambiguous parts.
+3. Write or update tests that express the intended behavior.
+4. Implement the smallest change that satisfies the intent.
+5. Run project tests.
+6. Run `agentkit check`.
+7. Run `agentkit review-guidance`.
+8. Spawn or request a clean-context reviewer when review is required.
+9. Fix meaningful reviewer findings.
+10. Repeat review -> fix -> review until no meaningful findings remain.
+11. Run `agentkit close`.
+
+AgentKit should not allow a task to close as completed if required gates are missing.
+
+Examples of missing gates:
+
+- no task state from `agentkit start`
+- no successful check receipt for the current diff fingerprint
+- docs impact not addressed
+- required review loop not acknowledged
+- meaningful reviewer findings unresolved
+- working tree still dirty when local policy requires commit
+- blocked human question not recorded
+
+If the main agent stops while the AgentKit task is still open, an integration may re-activate it with a reminder:
+
+```text
+AgentKit found an open task that was not closed.
+Are you done, still working, or blocked waiting for human input?
+Run `agentkit close` before ending the task.
+```
+
+This reminder is part of the lifecycle, not a one-off nag.
+
+The task should continue receiving reminders until it reaches a valid closed state.
+
+## 4. Exception Handling And Feedback
+
+Sometimes the agent cannot complete the normal path.
 
 Examples:
 
-- office documents
-- notes
-- GitHub issues
-- ProjectMan issues
-- conversations
-- user feedback
-- production problems
-
-The human brings the requirement to a coding agent and discusses:
-
-- what the user really needs
-- whether the current system design already covers it
-- which component owns the work
-- whether a new component or feature area is needed
-- what tests should prove the behavior
-- what docs should change
-- what risks or open questions remain
-
-The output should be a shared implementation direction, not necessarily a formal plan owned by AgentKit.
-
-Many coding agents already have plan modes. AgentKit should work with those modes instead of replacing them.
-
-## 2. Intent Recording and Documentation Placement
-
-After the design discussion, the important result should be recorded inside the repository.
-
-AgentKit should help the agent place the record in the right location:
-
-- component design docs for component-local decisions
-- architecture docs for cross-cutting structure
-- active specs for task-specific implementation plans
-- ADRs for meaningful long-term decisions
-- testing docs for validation strategy
-- `AGENTS.md` only for short, durable agent behavior rules
-
-The goal is not to record every word of the conversation. The goal is to preserve the human intent that future agents must respect.
-
-### Intent Recording Rules
-
-Agents should record intent when a task changes:
-
-- product behavior
-- public API
-- data model
-- architecture boundaries
-- workflow or state transitions
-- testing strategy
-- agent operating rules
-
-Agents may skip persistent intent recording for:
-
-- tiny mechanical fixes
-- formatting-only changes
-- obvious typo fixes
-- local refactors that do not change documented behavior
-
-When skipping, the agent should be able to explain why.
-
-## 3. Derived Tests, Checks, and Guardrails
-
-Once intent is recorded, the agent should derive validation from it.
-
-Possible derived artifacts:
-
-- unit tests
-- integration tests
-- API contract tests
-- architecture import tests
-- docs-impact rules
-- state transition tests
-- generated reference checks
-- review checklist items
-
-AgentKit does not need to auto-generate all of these on day one. Its first job is to remind the agent to consider them and provide templates or suggestions.
-
-Over time, repeated human corrections should become checks.
-
-Example:
-
-```text
-Human correction:
-  "API routes should not directly contain persistence logic."
-
-Promote to:
-  docs/architecture/dependency-rules.md
-  agentkit.yml layer rule
-  tests/test_architecture_imports.py
-```
-
-## 4. Implementation, Preferably TDD
-
-For behavioral work, the preferred path is test-first or test-anchored development.
-
-Recommended sequence:
-
-1. Read relevant intent and component docs.
-2. Write or update tests that express the intended behavior.
-3. Run tests and confirm the meaningful failure.
-4. Implement the smallest change that passes.
-5. Refactor while preserving tests.
-6. Run relevant checks.
-
-TDD should be strongly encouraged, but not treated as ceremony for every tiny task.
-
-TDD is most important for:
-
-- new behavior
-- state machines
-- API contracts
-- data model changes
-- orchestration logic
-- bug fixes with clear reproduction steps
-
-TDD can be optional for:
-
-- simple copy edits
-- style-only changes
-- local renames
-- one-line internal cleanups
-
-## 5. Delivery and Maintenance
-
-When implementation is complete, the agent should update maintenance artifacts.
-
-The agent should check:
-
-- Did public behavior change?
-- Did an API change?
-- Did a data model change?
-- Did a workflow or state transition change?
-- Did architecture boundaries change?
-- Did tests or validation commands change?
-- Did the user-facing behavior change?
-
-If yes, update the relevant docs.
-
-If no, record that no docs update was needed.
-
-The agent should also run AgentKit checks:
-
-```text
-agentkit check
-agentkit docs-impact
-agentkit lint-architecture
-```
-
-The exact commands may vary by repository.
-
-## 6. Autonomous Review and Fix Loop
-
-Before the human spends attention on the result, the implementation should pass at least one review loop for non-trivial work.
-
-The reviewer should ideally have a cleaner context than the implementing agent.
-
-The reviewer receives:
-
-- original task or requirement
-- recorded human intent
-- relevant design and component docs
-- implementation summary
-- changed files
-- test output
-- AgentKit check output
-
-The reviewer checks:
-
-- Does the implementation satisfy the original intent?
-- Did the agent invent unsupported assumptions?
-- Are tests meaningful?
-- Are docs stale?
-- Are architecture rules violated?
-- Is the change too broad?
-- Are there hidden failure modes?
-
-The implementing agent should fix meaningful findings before asking for human review.
-
-AgentKit does not need to directly spawn the reviewer in every environment. Its baseline responsibility is to remind the implementing agent when clean-context review is expected and return instructions for how to brief a reviewer.
-
-See [review-guidance.md](review-guidance.md) for the review guidance contract.
-
-Review means a loop, not a single pass. For non-trivial work, the implementing agent should perform review -> fix -> review until no meaningful reviewer findings remain, or only low-value residual risks are left for the human.
-
-## 7. Human Attention Policy
-
-Human attention should be spent on judgment calls, not preventable hygiene.
-
-Before involving the human, the agent should have already handled:
-
-- obvious test failures
-- lint failures
-- formatting
-- stale docs warnings
-- missing review guidance
-- straightforward reviewer findings
-
-The agent should ask the human when:
-
-- design is missing
+- human intent is missing
 - requirements conflict
-- the task would change product direction
-- the implementation has multiple reasonable architecture choices
-- a decision blocks the remaining work
+- design choices are ambiguous
+- a check cannot run in the current environment
+- review cannot be completed because required context is missing
 - continuing would require an unsupported assumption
 
-If one part is blocked but other parts are clear, the agent should continue with the clear work and isolate the blocked decision.
+In these cases, the agent should not silently end the task.
 
-## 8. AgentKit Responsibilities in This Workflow
+The fallback path is:
 
-AgentKit should help with:
+1. Explain the problem.
+2. Record the human question or blocker.
+3. Record what work is complete.
+4. Record what checks were not run and why.
+5. Run `agentkit close --blocked-question "..."`.
 
-- starting and closing agent tasks with repository-local state
-- creating a maintainable documentation system when introduced to a project
-- mapping code components to documentation components
-- reminding agents to record human-approved intent
-- telling agents where that intent should be recorded
-- suggesting tests and structural checks from design docs
-- checking likely stale documentation
-- checking architecture boundaries
-- generating review guidance for the implementing agent
-- reminding agents to close open tasks through runtime adapters where available
-- generating or updating an AgentKit skill for the repository
+Blocked close is a valid closed state only when it is traceable.
 
-AgentKit should not need to:
+It must include:
 
-- replace an agent's built-in plan mode
-- become a project management system
-- run all implementation work itself
-- force heavyweight ceremony on small tasks
+- the human question
+- why it blocks progress
+- current task state
+- open changes, if any
+- the next action needed after human input
 
-## 8.1 Task Close
+Blocked close must not create a task from scratch. The task must have been started with `agentkit start`.
 
-Every non-trivial task should end with:
+If a check or review is intentionally skipped, the agent must provide a reason. That reason should be visible to the human and should be stored in the task state or related task documentation.
+
+## 5. Close States
+
+`agentkit close` should end in one of three states.
+
+### `completed`
+
+The task is complete.
+
+Required signals:
+
+- task was started
+- checks passed for the current diff fingerprint
+- docs impact was addressed
+- required review loop was completed
+- low-risk work that does not require review has an explicit skip reason
+- no blocking human question remains
+- local git policy is satisfied
+
+If review is required but cannot be performed, the task should close as `blocked`, not `completed`.
+
+### `needs_work`
+
+The task cannot close yet.
+
+Examples:
+
+- missing task state
+- missing check receipt
+- missing review acknowledgement
+- unresolved open changes
+- docs impact still missing
+
+The agent should continue working.
+
+### `blocked`
+
+The task cannot responsibly continue without human input.
+
+Required signals:
+
+- task was started
+- human question is recorded
+- blocker is explained
+- current state is preserved
+- next action is clear
+
+The task should not keep nagging the agent until new human input arrives.
+
+## 6. Hooks
+
+AgentKit supports Git hooks and agent lifecycle hooks as separate layers.
+
+### Git Hooks
+
+`agentkit install-hooks` installs deterministic Git-triggered checks.
+
+The first hook is:
 
 ```text
-agentkit close
+.git/hooks/pre-commit -> agentkit check
 ```
 
-The close step checks whether the work is ready to hand back to the human or whether it should continue.
+This is not a separate manual `agentkit precommit` workflow. Git is the trigger.
 
-`agentkit close` should check:
+Git hooks should only run deterministic checks. They should not spawn reviewers or require long-running LLM judgment.
 
-- tests and AgentKit checks were run or intentionally skipped
-- docs impact was addressed
-- review loop was completed when required
-- meaningful reviewer findings were fixed
-- any blocking human question was recorded
-- git status is clean or the local policy explains what remains uncommitted
+### Agent Lifecycle Hooks
 
-If the agent is blocked waiting for human input, close should allow a blocked closure after the agent records:
+Runtime integrations may provide post-agent or monitor hooks.
 
-- the question
-- why it blocks progress
-- what work is already complete
-- what the next action should be after the human responds
-
-This gives the agent a sanctioned pushback path instead of forcing it to guess.
-
-In the MVP, successful `agentkit check` runs write local receipts keyed by the current diff fingerprint. `agentkit close` uses those receipts to avoid falsely completing work that has not passed the configured checks.
-
-## 8.2 Hooks And Reminders
-
-AgentKit should support two different hook layers.
-
-Git hooks are deterministic repository gates. `agentkit install-hooks` can install a standard `pre-commit` hook that runs `agentkit check`. This hook runs because Git invokes it; agents do not need to remember a separate pre-commit command.
-
-Agent lifecycle hooks are runtime integrations. When an environment supports a post-agent hook, scheduler, or ProjectMan/Symphony-style monitor, it can check for open AgentKit tasks and remind the agent to close them.
+Those integrations can detect open AgentKit tasks and re-activate the agent if the task has not been closed.
 
 Reminder behavior must be stateful:
 
 - no open task means no reminder
-- a closed task means no reminder
-- a blocked task with a recorded human question should wait for new input
-- the same unchanged diff should not trigger the same warning forever
+- completed task means no reminder
+- blocked task waits for new human input
+- unchanged acknowledged warnings should not repeat forever
+- changed fingerprints invalidate old receipts
 
-## 9. Skill Considerations
+## 7. Human Attention Policy
 
-Skills are an important adoption path.
+Human attention should be spent on judgment, not preventable hygiene.
 
-An AgentKit-enabled repository should be able to provide a local skill that tells agents:
+Before asking the human for final review, the agent should have already handled:
 
-- what AgentKit is
-- where the repository's intent docs live
-- how to inspect `agentkit.yml`
-- how to choose relevant component docs
-- how to run local checks
-- how to update docs
-- when to ask the human for design
-- how to request and follow review guidance
+- obvious test failures
+- AgentKit check failures
+- stale docs warnings
+- missing review loop
+- straightforward reviewer findings
+- uncommitted changes when local policy expects a commit
 
-The skill should be generated from repository-local configuration and docs, so it stays aligned with the project.
+The agent should ask the human when:
 
-The skill should be concise. It should teach agents how to navigate the system, not duplicate all project documentation.
+- design is missing
+- product direction is unclear
+- requirements conflict
+- multiple architecture choices are plausible
+- a decision blocks implementation
+- continuing would require an unsupported assumption
 
-## 10. First MVP Interpretation
+AgentKit should make this pushback legitimate by letting the agent close as blocked with a recorded human question.
 
-For the first version, AgentKit does not need to automate the whole workflow.
+## 8. First MVP Interpretation
 
-It should provide enough structure for agents and humans to follow the workflow manually:
+The first useful version should support the lifecycle manually through CLI commands and local files.
 
-- project initialization templates
-- task start records
-- documentation placement rules
-- component-to-doc manifest
-- docs-impact warnings
-- architecture lint suggestions
-- review guidance generation
-- task closeout checks
-- blocked-task recording
-- deterministic Git hook installation
-- repository-specific skill generation
+Minimum surfaces:
 
-This lets AgentKit become useful immediately while leaving room for deeper automation later.
+- `agentkit init`
+- `agentkit start`
+- `agentkit check`
+- `agentkit docs-impact`
+- `agentkit lint-architecture`
+- `agentkit review-guidance`
+- `agentkit close`
+- `agentkit install-hooks`
+- generated AgentKit skill
+- repository-local task state
+- local check and review receipts
+
+This list is a capability checklist, not the order for a single feature task.
+
+Repository setup capabilities such as `init`, hook installation, skill generation, docs structure, links, and rules should happen before concrete task execution whenever possible.
+
+Concrete task capabilities such as `start`, checks, review guidance, fallback, and `close` happen per task.
+
+The MVP does not need a daemon or hosted control plane.
+
+Post-agent reminders can be implemented later by ProjectMan, Symphony, editor integrations, or agent runtime hooks.

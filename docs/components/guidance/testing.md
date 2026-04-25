@@ -18,7 +18,9 @@ The tests should not assert exact prose unless the wording is part of the contra
 
 `start` tests should verify that AgentKit records:
 
+- task todo
 - durable intent sources
+- focus docs or focus notes when provided
 - affected components
 - relevant docs
 - expected checks
@@ -29,10 +31,18 @@ The tests should not assert exact prose unless the wording is part of the contra
 - missing check receipts produce `needs_work`
 - missing required review receipts produce `needs_work`
 - completed close requires a check receipt and review-complete signal when review is expected
+- skip reason does not satisfy required review
 - blocked tasks can close only with a recorded question
 - blocked close requires an existing started task
 - stale receipts are invalidated when the diff fingerprint changes
 - unchanged acknowledged warnings do not repeat indefinitely
+
+Fallback tests should verify that blocked closure preserves:
+
+- human question
+- open changes
+- existing task state
+- enough context for a human to resume the work
 
 ## Hook Tests
 

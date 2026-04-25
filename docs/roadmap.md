@@ -71,12 +71,22 @@ Create a default structure:
 - `docs/decisions/*`
 - optional skill skeleton
 
+Initialization should also guide the agent to finish repository-specific maintainability setup:
+
+- choose or adapt the documentation structure
+- configure doc links and durable intent locations
+- map components to docs
+- configure architecture rules
+- install deterministic Git hooks when appropriate
+
 ### Task Lifecycle State
 
 Track a lightweight task record for agent work:
 
 - task id
+- task todo
 - durable intent sources
+- focus docs and focus notes
 - relevant docs
 - affected components
 - expected checks
@@ -186,7 +196,9 @@ Commands:
 Capabilities:
 
 - create docs skeleton
+- guide repository maintainability setup during init
 - create and close lightweight task records
+- record task todo and focus context at start
 - validate manifest
 - orient agents at task start or continuation
 - warn on likely stale docs
@@ -194,6 +206,7 @@ Capabilities:
 - generate intent placement guidance
 - generate review guidance
 - verify closeout requirements before final handoff
+- support blocked close with human question as fallback
 - install deterministic Git hooks
 - generate a local skill
 

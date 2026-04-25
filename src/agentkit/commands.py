@@ -232,8 +232,7 @@ def close_task(
         state["skip_review_reason"] = skip_review_reason
         state["skip_review_fingerprint"] = current_fingerprint
     has_current_review = state.get("review_complete") and state.get("review_fingerprint") == current_fingerprint
-    has_current_skip = state.get("skip_review_reason") and state.get("skip_review_fingerprint") == current_fingerprint
-    if state.get("review_expected") and not has_current_review and not has_current_skip:
+    if state.get("review_expected") and not has_current_review:
         task_path.write_text(json.dumps(state, indent=2), encoding="utf-8")
         return (
             1,

@@ -119,6 +119,21 @@ def test_close_task_requires_review_or_skip_for_review_expected(tmp_path: Path) 
     assert "Missing Review Receipt" in output
 
 
+def test_close_task_rejects_skip_reason_for_required_review(tmp_path: Path) -> None:
+    from agentkit.commands import check
+
+    init_repo(tmp_path)
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "example.py").write_text("VALUE = 1\n", encoding="utf-8")
+    start_task(tmp_path, component_names=["core"])
+    check(tmp_path)
+
+    code, output = close_task(tmp_path, skip_review_reason="low risk")
+
+    assert code == 1
+    assert "Missing Review Receipt" in output
+
+
 def test_close_task_completes_after_check_and_review(tmp_path: Path) -> None:
     from agentkit.commands import check
 

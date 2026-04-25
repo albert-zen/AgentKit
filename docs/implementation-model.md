@@ -46,15 +46,26 @@ Outputs:
 - starter architecture rules
 - optional AgentKit skill
 
+`init` should also guide the agent to configure the repository's maintainability system:
+
+- docs root and durable intent locations
+- component-to-doc mappings
+- architecture layers and dependency rules
+- project-specific links and conventions
+- deterministic hooks through `agentkit install-hooks`
+
+The output should make clear that the initialized repo may still need human-agent configuration work before it is truly maintainable.
+
 ## `agentkit start`
 
 Start or resume an AgentKit task.
 
 Inputs:
 
-- task text
+- task todo or task statement
 - explicit component, optional
 - known durable intent docs, optional
+- focus docs or focus notes, optional
 - expected changed paths, optional
 - implementation plan text, optional
 
@@ -74,6 +85,8 @@ Side effect:
 - writes a repository-local task state file under `.agentkit/tasks/`
 
 `start` should reuse the same component and docs analysis as `orient`, but it persists enough state for `close` to evaluate whether the task was responsibly finished.
+
+The agent may run `start` after a design discussion, or run it earlier and later update the task context once the human-agent discussion clarifies the focus.
 
 ## `agentkit orient`
 
@@ -245,7 +258,7 @@ Inputs:
 
 - task id, optional if there is only one open task
 - blocked question, optional
-- skip reason for review or tests, optional
+- skip reason for low-risk work where review is not required, optional
 - validation summary, optional
 - review-complete flag, optional after the review loop has completed
 
@@ -470,20 +483,26 @@ The agent writes the content. AgentKit routes it.
 
 ## Concrete MVP Slice
 
-The first implementation should be able to run inside ProjectMan and support one real feature workflow.
+The first implementation should be able to initialize a repository for maintainability and then run one real feature through start, execution, review, fallback, and close.
 
 Minimum slice:
 
-1. Load `agentkit.yml`.
-2. Validate component docs and code paths.
-3. Run `agentkit start` to persist task context and durable intent sources.
-4. Run `agentkit orient --path <changed path>` or `agentkit orient --component orchestration`.
-5. Run `agentkit intent-guidance --component orchestration --change-type orchestration`.
-6. Run `agentkit docs-impact`.
-7. Run `agentkit lint-architecture` for Python imports.
-8. Run `agentkit review-guidance`.
-9. Run `agentkit close` to verify closeout or record a blocked human question.
-10. Run `agentkit install-hooks` to install deterministic Git checks.
-11. Generate `.codex/skills/agentkit/SKILL.md`.
+Repository setup:
+
+1. Run `agentkit init` to scaffold and guide maintainability setup.
+2. Configure `agentkit.yml`.
+3. Validate component docs and code paths.
+4. Run `agentkit install-hooks` to install deterministic Git checks.
+5. Generate `.codex/skills/agentkit/SKILL.md`.
+
+Concrete task:
+
+1. Run `agentkit start --task "<task todo>"` to persist task context and durable intent sources.
+2. Run `agentkit orient --path <changed path>` or `agentkit orient --component orchestration`.
+3. Run `agentkit intent-guidance --component orchestration --change-type orchestration`.
+4. Run `agentkit docs-impact`.
+5. Run `agentkit lint-architecture` for Python imports.
+6. Run `agentkit review-guidance`.
+7. Run `agentkit close` to verify closeout or record a blocked human question.
 
 If this works for ProjectMan's Symphony integration, AgentKit has proven its first useful value.
