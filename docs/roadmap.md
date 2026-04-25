@@ -227,7 +227,10 @@ Vision issues:
 - `start` should support explicit task updates, such as focus notes, focus docs, task ids, and refined plans.
 - `close` should explain missing gates in a way agents can act on immediately.
 - task state should distinguish current focus, original task todo, human-approved constraints, receipts, and blocked handoff notes.
+- `status` should sample task state into facts about open tasks, missing gates, stale receipts, and blocked questions.
+- `remind` should turn the same sampled state into agent-facing next actions.
 - reminders should be generated from open task state, not from chat memory.
+- `check` may surface lifecycle reminders, but shared status/reminder logic should remain reusable by other commands.
 - a lightweight `agentkit watch` process is acceptable as an AgentKit-owned local adapter for delivering reminders on one machine.
 
 Success criteria:
@@ -246,7 +249,8 @@ AgentKit can do these things by itself:
 - determine whether a task is `completed`, `needs_work`, or `blocked`
 - compute whether receipts are stale for the current fingerprint
 - generate a reminder message for an open task
-- expose commands such as a future `agentkit remind` or `agentkit status`
+- expose commands such as `agentkit status` and `agentkit remind`
+- include lifecycle reminder output in `agentkit check` when useful
 - run a lightweight local `agentkit watch` process that periodically checks open task state
 - run deterministic checks from Git hooks
 

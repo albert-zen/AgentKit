@@ -54,10 +54,11 @@ Before requesting review, the implementing agent should:
 3. Summarize the implementation.
 4. List changed files.
 5. Run relevant tests and checks.
-6. Note docs updates or explain why none were needed.
-7. Ask AgentKit for review guidance.
-8. Spawn or request a clean-context reviewer with that guidance when review is expected.
-9. Record the review result so `agentkit close` can verify the review loop.
+6. Read any lifecycle reminders emitted by `agentkit check`, `agentkit status`, or `agentkit remind`.
+7. Note docs updates or explain why none were needed.
+8. Ask AgentKit for review guidance.
+9. Spawn or request a clean-context reviewer with that guidance when review is expected.
+10. Record the review result so `agentkit close` can verify the review loop.
 
 The implementing agent should not ask for human review while obvious test failures, architecture lint failures, or stale-doc warnings remain unresolved.
 
@@ -169,7 +170,7 @@ One review pass is not a loop. A review loop requires at least one review pass, 
 
 If review cannot be performed, the implementing agent must not mark the task completed. It should record why review could not happen, preserve the current state, ask the human a concrete question, and run `agentkit close --blocked-question "..."`.
 
-Reminder adapters should treat missing required review as an open closeout gate. If the task is not blocked with a recorded human question, the adapter may re-activate the agent and ask it to complete review or close the task as blocked. An AgentKit-owned local `agentkit watch` process may provide this reminder delivery while it is running, but it should only deliver the reminder generated from AgentKit state; it should not perform the review or spawn agents itself.
+Reminder adapters should treat missing required review as an open closeout gate. If the task is not blocked with a recorded human question, the adapter may re-activate the agent and ask it to complete review or close the task as blocked. `agentkit check`, `agentkit status`, `agentkit remind`, and an AgentKit-owned local `agentkit watch` process should all derive their guidance from the same task-state sampler. The watcher may provide this reminder delivery while it is running, but it should only deliver the reminder generated from AgentKit state; it should not perform the review or spawn agents itself.
 
 ## AgentKit Responsibilities
 

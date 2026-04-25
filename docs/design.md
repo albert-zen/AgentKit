@@ -329,7 +329,9 @@ This reminder should be stateful, not noisy. Once the task is closed, it stops. 
 
 AgentKit itself may provide the local state model and CLI commands. Runtime-specific reminders can be implemented by adapters, ProjectMan, Symphony, editor integrations, or future agent platform hooks.
 
-AgentKit owns reminder truth, and it may also ship a lightweight local watcher for reminder delivery. It can record open task state, decide whether a reminder is needed, and generate the reminder text. To wake a stopped agent or send a message into a running environment, AgentKit needs a delivery trigger: this can be an external adapter such as an agent runtime hook, ProjectMan, Symphony, an editor integration, or OS scheduler, or an AgentKit-owned `agentkit watch` process. The watcher should remain a local reminder adapter, not a general orchestrator.
+AgentKit owns reminder truth, and it may also ship a lightweight local watcher for reminder delivery. It can record open task state, sample that state at any moment, decide whether a reminder is needed, and generate the reminder text. To wake a stopped agent or send a message into a running environment, AgentKit needs a delivery trigger: this can be an external adapter such as an agent runtime hook, ProjectMan, Symphony, an editor integration, or OS scheduler, or an AgentKit-owned `agentkit watch` process. The watcher should remain a local reminder adapter, not a general orchestrator.
+
+The same state sampler should power `check`, `status`, `remind`, `watch`, and external integrations. `check` may include lifecycle reminders for convenience, but the reminder policy should live below the command layer so every entry point sees the same missing gates and fallback options.
 
 ## Intent Injection Channels
 
@@ -664,6 +666,24 @@ Run all configured checks:
 - architecture lint
 - optional generated-doc freshness checks
 
+`check` may also print lifecycle reminders sampled from the current task state. This makes the common command more useful without making `check` the only owner of reminder logic.
+
+### `agentkit status`
+
+Print the current task lifecycle state:
+
+- open tasks
+- completed, needs-work, or blocked state
+- missing closeout gates
+- stale check or review receipts
+- recorded blocked human questions
+
+### `agentkit remind`
+
+Print agent-facing next actions derived from the same lifecycle state as `status`.
+
+`remind` is useful when an agent wants guidance without running repository checks, and it gives `watch` and external adapters a stable reminder surface.
+
 ### `agentkit close`
 
 Close the current AgentKit task.
@@ -686,6 +706,12 @@ Install repository-local Git hooks that invoke AgentKit checks automatically at 
 The first hook should be a standard `pre-commit` hook that runs deterministic checks such as `agentkit check`. Agents and humans should not need to remember a separate manual `agentkit precommit` command.
 
 The hook layer is for deterministic repository checks. It should not spawn reviewers or perform long-running LLM judgment.
+
+### `agentkit watch`
+
+Run a lightweight local reminder loop.
+
+`watch` should repeatedly call the same status/reminder logic used by `status`, `remind`, and the lifecycle reminder section of `check`. It should deliver reminders while a task is open and missing gates, then stop once the task is completed or traceably blocked.
 
 ### `agentkit plan <name>`
 
@@ -810,6 +836,8 @@ The first useful version should include:
 - default templates for `AGENTS.md`, docs, specs, and ADRs
 - a simple YAML manifest
 - Python import graph checks
+
+The next lifecycle-focused iteration should add `agentkit status` and `agentkit remind` as first-class ways to sample task state. A lightweight `agentkit watch` command can follow as an optional local reminder adapter once the shared sampler exists.
 
 ## Open Questions
 

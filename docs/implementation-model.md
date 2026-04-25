@@ -250,6 +250,10 @@ Run configured checks:
 
 This should be the command agents run before review.
 
+`check` should stay safe for Git hooks: it must remain deterministic and must not spawn reviewers or require long-running LLM judgment. It may include a lifecycle reminder section derived from `.agentkit/` task state, so an agent that only remembers to run `check` still sees missing closeout gates.
+
+`check` should not be the only owner of reminder logic. The underlying status/reminder engine should be callable by `status`, `remind`, `watch`, and external adapters.
+
 ## `agentkit close`
 
 Close the current AgentKit task.
@@ -287,9 +291,9 @@ The close command should not create an infinite loop. It should use receipts key
 
 The MVP receipt model starts with check receipts written by successful `agentkit check` runs. Review receipts may begin as an explicit close-time assertion such as `agentkit close --review-complete`, with richer reviewer-result parsing added later. Check and review acknowledgements must be keyed to the current diff fingerprint so they cannot be reused after later commits or edits.
 
-## Future `agentkit status` / `agentkit remind`
+## Near-Term `agentkit status` / `agentkit remind`
 
-AgentKit should eventually expose task status and reminder generation as explicit commands.
+AgentKit should expose task status and reminder generation as explicit commands backed by the same state sampler that `check` and `watch` use.
 
 Potential outputs:
 
@@ -300,9 +304,24 @@ Potential outputs:
 - blocked human questions
 - reminder text for runtime adapters
 
-These commands would let AgentKit own reminder logic while allowing ProjectMan, Symphony, editor integrations, OS schedulers, or agent runtimes to own delivery.
+`status` is the facts view. It should be useful for humans, agents, and machine integrations that need to inspect the current lifecycle state.
 
-## Future `agentkit watch`
+`remind` is the action view. It should turn the same facts into next-step instructions, such as:
+
+```text
+Current task is open.
+Missing gates:
+- run agentkit check for the current diff
+- complete the required review loop
+- commit or record a blocked handoff
+
+Next action:
+Run the missing gate, or close as blocked with a recorded human question if progress is impossible.
+```
+
+These commands let AgentKit own reminder logic while allowing AgentKit's own watcher, ProjectMan, Symphony, editor integrations, OS schedulers, or agent runtimes to own delivery.
+
+## Optional `agentkit watch`
 
 AgentKit may provide a lightweight local watcher as a first-party reminder delivery adapter.
 
@@ -322,6 +341,8 @@ Non-responsibilities:
 - perform semantic LLM review
 
 `watch` should reuse the same status/reminder logic exposed by `status` or `remind`, so delivery remains separate from truth.
+
+`watch` should keep reminding while a task is open and required gates are missing. Once `close` records `completed` or a traceable `blocked` state, the watcher should stop reminding for that task until new human input or changed task state makes it active again.
 
 ## `agentkit install-hooks`
 

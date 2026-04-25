@@ -50,6 +50,8 @@ Reminder tests should eventually verify:
 - completed tasks do not produce reminders
 - blocked tasks wait for new human input
 - stale receipts produce actionable missing-gate messages
+- `check`, `status`, `remind`, and `watch` derive reminders from the same sampler
+- reminder rendering does not change task state beyond the normal receipt side effects of the command that displays it
 
 Watcher tests should eventually verify:
 

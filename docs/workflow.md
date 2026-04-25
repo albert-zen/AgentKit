@@ -140,6 +140,28 @@ The important rule is this:
 
 Human intent and task focus must be written into a durable task context before implementation closes. They cannot live only in chat memory.
 
+## 2.5. Task State And Reminder Sampling
+
+After `start`, AgentKit maintains repository-local task state under `.agentkit/`.
+
+This state is the source for lifecycle reminders. At any moment, AgentKit should be able to sample the state and answer:
+
+- what task is open
+- which durable intent sources matter
+- which gates have been satisfied
+- which gates are still missing
+- whether the task is blocked with a recorded human question
+- what the agent should do next
+
+Commands can use this same sampling model in different ways:
+
+- `agentkit check` runs deterministic repository checks and may also show the current lifecycle reminders.
+- `agentkit status` should expose the sampled task state and missing gates.
+- `agentkit remind` should format the sampled state into action-oriented instructions for the agent.
+- `agentkit watch` should repeatedly sample the state and deliver reminders while it is running.
+
+The important product rule is that reminders are derived from durable state, not from chat memory. If the task reaches a valid completed or blocked state, reminders stop. If the task is open and closeout gates are missing, reminders continue until the agent either completes the gates or records a legitimate blocked fallback.
+
 ## 3. Task Execution And Checks
 
 During execution, the agent implements against the task record and the durable docs it references.
@@ -162,7 +184,7 @@ Recommended execution sequence:
 3. Write or update tests that express the intended behavior.
 4. Implement the smallest change that satisfies the intent.
 5. Run project tests.
-6. Run `agentkit check`.
+6. Run `agentkit check` and read any lifecycle reminders it reports.
 7. Run `agentkit review-guidance`.
 8. Spawn or request a clean-context reviewer when review is required.
 9. Fix meaningful reviewer findings.
@@ -314,6 +336,8 @@ Reminder behavior must be stateful:
 - unchanged acknowledged warnings should not repeat forever
 - changed fingerprints invalidate old receipts
 
+`watch` should not invent its own policy. It should call the same status/reminder logic used by `check`, `status`, and `remind`.
+
 ## 7. Human Attention Policy
 
 Human attention should be spent on judgment, not preventable hygiene.
@@ -360,8 +384,10 @@ This list is a capability checklist, not the order for a single feature task.
 
 Repository setup capabilities such as `init`, hook installation, skill generation, docs structure, links, and rules should happen before concrete task execution whenever possible.
 
-Concrete task capabilities such as `start`, checks, review guidance, fallback, and `close` happen per task.
+Concrete task capabilities such as `start`, checks, status/reminder sampling, review guidance, fallback, and `close` happen per task.
 
 The MVP does not need a daemon or hosted control plane.
+
+The near-term lifecycle extension should add `agentkit status` and `agentkit remind` so agents and adapters can sample task state directly.
 
 Post-agent reminders can be implemented later by AgentKit's own lightweight `agentkit watch` adapter, ProjectMan, Symphony, editor integrations, agent runtime hooks, or other local triggers.

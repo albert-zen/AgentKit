@@ -21,12 +21,15 @@ The CLI should stay thin. It should parse arguments and delegate behavior to com
 - `agentkit start`
 - `agentkit orient`
 - `agentkit intent-guidance`
+- `agentkit status`
+- `agentkit remind`
 - `agentkit docs-impact`
 - `agentkit lint-architecture`
 - `agentkit check`
 - `agentkit review-guidance`
 - `agentkit close`
 - `agentkit install-hooks`
+- `agentkit watch`
 - `agentkit skill`
 
 ## Lifecycle Commands
@@ -37,6 +40,16 @@ The CLI should stay thin. It should parse arguments and delegate behavior to com
 
 `close` accepts `--review-complete` after a required review loop and `--skip-review-reason` for low-risk work where review is intentionally skipped.
 
+`status` and `remind` expose the current lifecycle state without changing it. `status` should print facts about open tasks, missing gates, stale receipts, and blocked handoffs. `remind` should print agent-facing next actions derived from those facts.
+
+`check` may include lifecycle reminders in its output, but the CLI should still route status/reminder computation through shared guidance logic instead of implementing reminder policy itself.
+
 ## Hook Commands
 
 `install-hooks` installs Git-triggered deterministic hooks. It should not create a separate manual pre-commit workflow for agents.
+
+## Watch Command
+
+`watch` runs a lightweight local reminder loop. It should call the same status/reminder logic as `status`, `remind`, and `check`, then deliver the resulting reminder text while it is running.
+
+The CLI should expose interval and output options when needed, but it should not turn `watch` into an agent runner or job scheduler.

@@ -66,6 +66,17 @@ Reminder guidance should distinguish state from delivery. AgentKit owns the open
 
 `agentkit watch` should be treated as a first-party reminder adapter, not a new orchestration layer. It may poll local task state, emit reminder text, and call configured local notification commands. It should not spawn coding agents, manage queues, or perform semantic review.
 
+The guidance component should provide a shared lifecycle sampler:
+
+- read task state
+- compare task state with the current diff fingerprint
+- inspect check and review receipts
+- evaluate whether the task is open, completed, needs work, or blocked
+- produce missing gates
+- produce agent-facing reminder text
+
+`agentkit check`, `agentkit status`, `agentkit remind`, `agentkit watch`, and external adapters should all use this same sampler. `check` can show reminder output for convenience, but it should not become the only place reminder policy lives.
+
 ## Hook Guidance
 
 `install-hooks` should install Git-native hooks for deterministic checks.
