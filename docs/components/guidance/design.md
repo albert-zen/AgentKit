@@ -23,6 +23,7 @@ The guidance component gives the implementing agent practical next steps:
 - task lifecycle guidance
 - closeout requirements
 - hook and reminder guidance
+- reminder state and reminder text generation
 
 ## Boundary
 
@@ -60,6 +61,8 @@ Closeout should avoid noisy loops by using state:
 - blocked tasks with recorded human questions should wait for new input
 
 Fallback handling is part of guidance. If checks or review cannot proceed, the agent must record the reason and human question, then still use `agentkit close --blocked-question "..."`.
+
+Reminder guidance should distinguish state from delivery. AgentKit owns the open-task state, missing-gate detection, stale-receipt detection, and reminder text. Runtime adapters such as ProjectMan, Symphony, editor integrations, schedulers, or agent hooks own waking or messaging the agent.
 
 ## Hook Guidance
 

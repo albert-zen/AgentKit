@@ -169,6 +169,8 @@ One review pass is not a loop. A review loop requires at least one review pass, 
 
 If review cannot be performed, the implementing agent must not mark the task completed. It should record why review could not happen, preserve the current state, ask the human a concrete question, and run `agentkit close --blocked-question "..."`.
 
+Reminder adapters should treat missing required review as an open closeout gate. If the task is not blocked with a recorded human question, the adapter may re-activate the agent and ask it to complete review or close the task as blocked.
+
 ## AgentKit Responsibilities
 
 AgentKit should support the review loop by generating guidance:

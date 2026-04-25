@@ -302,6 +302,8 @@ Runtime integrations may provide post-agent or monitor hooks.
 
 Those integrations can detect open AgentKit tasks and re-activate the agent if the task has not been closed.
 
+AgentKit can determine that a reminder is needed and generate the reminder text from local task state. Delivering that reminder to a stopped agent usually requires an external trigger, such as an agent runtime hook, ProjectMan/Symphony monitor, editor integration, local scheduler, or future AgentKit watcher.
+
 Reminder behavior must be stateful:
 
 - no open task means no reminder

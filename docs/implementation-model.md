@@ -287,6 +287,21 @@ The close command should not create an infinite loop. It should use receipts key
 
 The MVP receipt model starts with check receipts written by successful `agentkit check` runs. Review receipts may begin as an explicit close-time assertion such as `agentkit close --review-complete`, with richer reviewer-result parsing added later. Check and review acknowledgements must be keyed to the current diff fingerprint so they cannot be reused after later commits or edits.
 
+## Future `agentkit status` / `agentkit remind`
+
+AgentKit should eventually expose task status and reminder generation as explicit commands.
+
+Potential outputs:
+
+- open task ids
+- close state
+- missing gates
+- stale receipts
+- blocked human questions
+- reminder text for runtime adapters
+
+These commands would let AgentKit own reminder logic while allowing ProjectMan, Symphony, editor integrations, OS schedulers, or agent runtimes to own delivery.
+
 ## `agentkit install-hooks`
 
 Install repository-local hooks.

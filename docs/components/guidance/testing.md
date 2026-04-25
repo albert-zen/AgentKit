@@ -44,6 +44,13 @@ Fallback tests should verify that blocked closure preserves:
 - existing task state
 - enough context for a human to resume the work
 
+Reminder tests should eventually verify:
+
+- open tasks produce reminder text
+- completed tasks do not produce reminders
+- blocked tasks wait for new human input
+- stale receipts produce actionable missing-gate messages
+
 ## Hook Tests
 
 `install-hooks` tests should verify that:

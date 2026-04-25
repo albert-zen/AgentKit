@@ -216,6 +216,55 @@ Success criteria:
 - A coding agent can use AgentKit output to decide which docs to read and update.
 - Docs-impact and architecture checks catch real issues without being too noisy.
 
+## Phase 1.5: Lifecycle Usability
+
+Goal: Make the repo/task lifecycle easier for agents to follow without adding a heavy control plane.
+
+Vision issues:
+
+- `init` should become a repo readiness audit, not only a scaffold command.
+- `init` should report whether docs, component mappings, architecture rules, hooks, and skills are present.
+- `start` should support explicit task updates, such as focus notes, focus docs, task ids, and refined plans.
+- `close` should explain missing gates in a way agents can act on immediately.
+- task state should distinguish current focus, original task todo, human-approved constraints, receipts, and blocked handoff notes.
+- reminders should be generated from open task state, not from chat memory.
+
+Success criteria:
+
+- A new repo can run `agentkit init` and receive a clear maintainability readiness report.
+- A task can be started before or after discussion and later refined without losing the human-approved focus.
+- `agentkit close` gives a precise next action whenever it returns `needs_work`.
+
+## Reminder Automation Model
+
+AgentKit can own reminder state and reminder logic, but it cannot always own wakeup delivery.
+
+AgentKit can do these things by itself:
+
+- record open tasks in `.agentkit/`
+- determine whether a task is `completed`, `needs_work`, or `blocked`
+- compute whether receipts are stale for the current fingerprint
+- generate a reminder message for an open task
+- expose commands such as a future `agentkit remind` or `agentkit status`
+- run deterministic checks from Git hooks
+
+AgentKit usually needs an external trigger to deliver reminders after an agent has stopped.
+
+Possible triggers:
+
+- an agent runtime post-run hook
+- ProjectMan or Symphony monitoring an agent run
+- an editor integration
+- an OS scheduled task
+- a CI job or local background service
+
+The key design boundary:
+
+- AgentKit owns the repo-local truth: task state, receipts, rules, and reminder text.
+- Runtime adapters own delivery: when and how to wake or message an agent.
+
+AgentKit may later ship a lightweight local watcher, but that watcher is an adapter around AgentKit state, not the core product.
+
 ## Phase 2: ProjectMan Dogfood Integration
 
 Goal: Use AgentKit while adding Symphony-style agent spawning and board features to ProjectMan.
