@@ -75,7 +75,6 @@ components:
       - docs/**
       - README.md
       - AGENTS.md
-      - .codex/skills/agentkit/SKILL.md
     docs:
       - docs/design.md
       - docs/workflow.md
@@ -87,6 +86,25 @@ components:
       - docs
       - documentation
       - maintainability
+
+  skill:
+    description: Codex plugin packaging and bundled AgentKit skill for agents using the toolkit.
+    code:
+      - plugins/agentkit/**
+      - .agents/plugins/marketplace.json
+    docs:
+      - docs/components/skill/design.md
+      - docs/components/skill/testing.md
+      - docs/design.md
+      - docs/workflow.md
+    required_docs:
+      - design
+      - testing
+    keywords:
+      - plugin
+      - skill
+      - marketplace
+      - codex
 
   governance:
     description: Repository hygiene, package boundaries, and AgentKit's own dogfood baseline.
@@ -149,4 +167,5 @@ review:
   default: warn
 
 skills:
-  output: .codex/skills/agentkit/SKILL.md
+  source: plugins/agentkit/skills/agentkit/SKILL.md
+  output: plugins/agentkit/skills/agentkit/SKILL.md

@@ -7,6 +7,7 @@ from pathlib import Path
 from agentkit.commands import (
     check,
     close_task,
+    codex_stop_hook,
     docs_impact,
     doctor,
     generate_skill,
@@ -70,6 +71,8 @@ def main(argv: list[str] | None = None) -> None:
     hooks_parser = subparsers.add_parser("install-hooks")
     hooks_parser.add_argument("--force", action="store_true")
 
+    subparsers.add_parser("codex-stop-hook")
+
     watch_parser = subparsers.add_parser("watch")
     watch_parser.add_argument("--interval", type=float, default=30.0)
     watch_parser.add_argument("--once", action="store_true")
@@ -131,6 +134,11 @@ def main(argv: list[str] | None = None) -> None:
             raise SystemExit(code)
         elif args.command == "install-hooks":
             print(install_hooks(repo, force=args.force))
+        elif args.command == "codex-stop-hook":
+            code, output = codex_stop_hook(repo, sys.stdin.read())
+            if output:
+                print(output)
+            raise SystemExit(code)
         elif args.command == "watch":
             raise SystemExit(watch_task(repo, interval_seconds=args.interval, once=args.once))
         elif args.command == "review-guidance":

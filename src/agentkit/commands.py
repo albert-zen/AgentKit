@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import ast
+import json
 from pathlib import Path
 
 from agentkit.config import AgentKitConfig, ComponentConfig, LayerConfig, load_config
 from agentkit.fs import expand_patterns, matches_any, relpath
 from agentkit.git import changed_paths, diff_fingerprint, git_path, is_git_repo
-from agentkit.lifecycle import reminder_text, status_text
+from agentkit.lifecycle import reminder_text, render_reminder, sample_lifecycle, status_text
 from agentkit.receipts import has_receipt, write_receipt
 from agentkit.render import bullet, section
 from agentkit.task_state import DEFAULT_TASK_ID, load_task_state, task_path, write_task_state
@@ -17,7 +18,7 @@ AGENTKIT_AGENT_SECTION_MARKER = "<!-- agentkit:agents-section -->"
 AGENTKIT_AGENT_SECTION = f"""### AgentKit
 
 {AGENTKIT_AGENT_SECTION_MARKER}
-This repository uses AgentKit to keep agent-led changes tied to durable intent, checks, review, and closeout. Start with `agentkit start --task "..."`, use `agentkit check` plus `agentkit status` or `agentkit remind` while working, and finish with `agentkit close`. For the full operating guide, read the generated AgentKit skill.
+This repository uses AgentKit to keep agent-led changes tied to durable intent, checks, review, and closeout. Start with `agentkit start --task "..."`, use `agentkit check` plus `agentkit status` or `agentkit remind` while working, and finish with `agentkit close`. For the full operating guide, read the AgentKit plugin skill.
 """
 
 DEFAULT_AGENT_MD = f"""{AGENTKIT_AGENT_SECTION}
@@ -55,7 +56,189 @@ review:
   default: warn
 
 skills:
-  output: .codex/skills/agentkit/SKILL.md
+  source: plugins/agentkit/skills/agentkit/SKILL.md
+  output: plugins/agentkit/skills/agentkit/SKILL.md
+"""
+
+DEFAULT_SKILL_MD = """---
+name: agentkit
+description: Use AgentKit to orient coding agents, enforce repository-local maintainability rules, check docs impact, and request clean-context review guidance.
+---
+
+# AgentKit Skill
+
+This repository uses AgentKit.
+
+## What AgentKit Gives You
+
+AgentKit keeps your work tied to durable repo intent. Use it to:
+
+- find the docs and components relevant to a task
+- remember the task's closeout gates
+- check docs impact and architecture rules
+- get lifecycle reminders while you work
+- ask for clean-context review before human attention
+- close the task as completed or blocked
+
+The skill is an operating guide. For deeper product or architecture intent, read the durable docs that AgentKit returns.
+
+## Normal Operating Loop
+
+1. Start or resume the task with `agentkit start`.
+2. Read the durable intent sources in the output.
+3. If design is missing or ambiguous for product behavior, API, data model, workflow, architecture, or state transitions, ask the human before implementing that part.
+4. Implement against tests and the repo's architecture rules.
+5. Run `agentkit check` and read any lifecycle reminder it prints.
+6. Run `agentkit review-guidance` and request clean-context review when expected.
+7. Fix meaningful reviewer findings.
+8. Run `agentkit close --review-complete`, or close as blocked with a recorded human question.
+
+## Start Of Task
+
+Run:
+
+```text
+agentkit start
+```
+
+`start` writes repository-local task state under `.agentkit/`. In a read-only audit, do not run `start`; read this skill and use read-only commands such as `agentkit status` or `agentkit remind` instead.
+
+If you know the component, run:
+
+```text
+agentkit start --component <name>
+```
+
+After discussion clarifies the task, preserve the focus:
+
+```text
+agentkit start --task "<refined task>" --focus-note "<human-approved focus>" --focus-doc <path>
+```
+
+Use `agentkit start --component <name>` when you already know the component. Otherwise, include the task text and let AgentKit infer affected components.
+
+## During Design
+
+Use:
+
+```text
+agentkit intent-guidance --component <name> --change-type <type>
+```
+
+Write the actual design content yourself. AgentKit tells you where it belongs.
+
+Useful change-type values include `architecture`, `data_model`, `public_api`, `orchestration`, `workflow`, `tests`, and `docs`.
+
+For docs-only wording tasks, ask the human for design only when the wording changes product meaning, command semantics, public behavior, workflow expectations, or accepted terminology. For local copyedits that preserve meaning, proceed with focused docs checks and review expectations from AgentKit.
+
+## Before Review
+
+Run:
+
+```text
+agentkit check
+agentkit review-guidance
+```
+
+If review is expected, spawn or request a clean-context reviewer with the guidance AgentKit returns.
+
+Do not treat review as a transcript storage task. AgentKit only needs the main agent to acknowledge that the review loop was completed for the current diff. If review reveals durable design, risk, or testing knowledge, record that in the repository docs.
+
+For low-risk docs-only wording changes, review may still be expected by local policy. Use `agentkit review-guidance` to decide. If review is not required and the change is truly low risk, close with the local skip-review path only when AgentKit allows it.
+
+## Lifecycle Reminders
+
+Use:
+
+```text
+agentkit status
+agentkit remind
+```
+
+`status` shows task facts and missing gates. `remind` shows the next action. `agentkit check` may also include lifecycle reminders.
+
+For a local reminder loop, use:
+
+```text
+agentkit watch
+```
+
+## Close Task
+
+Before ending the task, run:
+
+```text
+agentkit close --review-complete
+```
+
+If blocked on human input, run:
+
+```text
+agentkit close --blocked-question "..."
+```
+
+Use blocked close when continuing would require an unsupported assumption. Include the human question clearly.
+"""
+
+DEFAULT_CODEX_PLUGIN_JSON = """{
+  "name": "agentkit",
+  "version": "0.1.0",
+  "description": "Repo-local maintainability workflow for agent-led coding tasks.",
+  "skills": "./skills/",
+  "hooks": "./hooks.json",
+  "interface": {
+    "displayName": "AgentKit",
+    "shortDescription": "Keep agent-led code changes tied to durable intent, checks, review, and closeout.",
+    "longDescription": "AgentKit teaches coding agents how to start tasks, read durable intent, run repository checks, request review, and close or block work traceably.",
+    "developerName": "AgentKit",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": [
+      "Use AgentKit to start this task and follow the repository closeout workflow.",
+      "Use AgentKit to check whether this task is ready for review and closeout."
+    ]
+  }
+}
+"""
+
+DEFAULT_CODEX_PLUGIN_HOOKS_JSON = """{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "agentkit codex-stop-hook",
+            "timeout": 30,
+            "statusMessage": "Checking AgentKit task closeout"
+          }
+        ]
+      }
+    ]
+  }
+}
+"""
+
+DEFAULT_CODEX_MARKETPLACE_JSON = """{
+  "name": "agentkit-local",
+  "interface": {
+    "displayName": "AgentKit Local"
+  },
+  "plugins": [
+    {
+      "name": "agentkit",
+      "source": {
+        "source": "local",
+        "path": "./plugins/agentkit"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
 """
 
 TASK_STOPWORDS = {
@@ -94,11 +277,18 @@ def init_repo(repo: Path, force: bool = False) -> str:
         repo / "docs" / "decisions",
         repo / "docs" / "specs" / "active",
         repo / "docs" / "specs" / "completed",
+        repo / "plugins" / "agentkit" / ".codex-plugin",
+        repo / "plugins" / "agentkit" / "skills" / "agentkit",
+        repo / ".agents" / "plugins",
     ]:
         directory.mkdir(parents=True, exist_ok=True)
     _write_if_missing(repo / "docs" / "design.md", "# Design\n\nStatus: Draft\n", created, force)
     _write_if_missing(repo / "docs" / "workflow.md", "# Workflow\n\nStatus: Draft\n", created, force)
     _write_if_missing(repo / "docs" / "architecture" / "dependency-rules.md", "# Dependency Rules\n", created, force)
+    _write_if_missing(repo / "plugins" / "agentkit" / ".codex-plugin" / "plugin.json", DEFAULT_CODEX_PLUGIN_JSON, created, force)
+    _write_if_missing(repo / "plugins" / "agentkit" / "hooks.json", DEFAULT_CODEX_PLUGIN_HOOKS_JSON, created, force)
+    _write_if_missing(repo / "plugins" / "agentkit" / "skills" / "agentkit" / "SKILL.md", DEFAULT_SKILL_MD, created, force)
+    _ensure_agentkit_marketplace_entry(repo / ".agents" / "plugins" / "marketplace.json", created, force)
     return section("AgentKit Init", bullet(created or ["No files changed"]))
 
 
@@ -137,9 +327,24 @@ def doctor(repo: Path) -> tuple[int, str]:
                 ok.append(f"architecture layers configured: {len(config.layers)}")
             else:
                 recommendations.append("No architecture layers configured in agentkit.yml; add them when dependency direction matters")
+            skill_source = repo / config.skills.source
+            if skill_source.exists():
+                ok.append("canonical AgentKit skill source exists")
+            else:
+                findings.append("Canonical AgentKit skill source is missing; run `agentkit init`")
+            plugin_manifest = repo / "plugins" / "agentkit" / ".codex-plugin" / "plugin.json"
+            if plugin_manifest.exists():
+                ok.append("AgentKit Codex plugin manifest exists")
+            else:
+                findings.append("AgentKit Codex plugin manifest is missing; run `agentkit init`")
+            marketplace = repo / ".agents" / "plugins" / "marketplace.json"
+            if _has_agentkit_marketplace_entry(marketplace):
+                ok.append("AgentKit Codex marketplace entry exists")
+            else:
+                findings.append("AgentKit Codex marketplace is missing; run `agentkit init`")
             skill_path = repo / config.skills.output
             if skill_path.exists():
-                ok.append("generated AgentKit skill exists")
+                ok.append("runtime AgentKit skill output exists")
             else:
                 findings.append("Generated AgentKit skill is missing; run `agentkit skill`")
         except Exception as exc:
@@ -334,6 +539,25 @@ def install_hooks(repo: Path, force: bool = False) -> str:
     return section("Hooks Installed", [relpath(hook_path, repo)])
 
 
+def codex_stop_hook(repo: Path, payload_text: str) -> tuple[int, str]:
+    payload: dict[str, object] = {}
+    if payload_text.strip():
+        loaded = json.loads(payload_text)
+        if isinstance(loaded, dict):
+            payload = loaded
+    hook_repo = _repo_from_hook_payload(repo, payload)
+    sample = sample_lifecycle(hook_repo)
+    if sample.state not in {"needs_work", "ready_to_close"}:
+        return (0, "")
+    reminder = render_reminder(sample)
+    reason = (
+        f"{reminder}\n\n"
+        "AgentKit has not reached a valid closeout state. Continue the task, complete the missing gates, "
+        "or run `agentkit close --blocked-question \"...\"` if human input is required."
+    )
+    return (0, json.dumps({"decision": "block", "reason": reason}))
+
+
 def orient(
     repo: Path,
     component_names: list[str] | None = None,
@@ -499,127 +723,16 @@ def generate_skill(repo: Path) -> str:
     output = repo / config.skills.output
     output.parent.mkdir(parents=True, exist_ok=True)
     component_names = ", ".join(sorted(config.components)) or "none configured"
-    content = f"""---
-name: agentkit
-description: Use AgentKit to orient coding agents, enforce repository-local maintainability rules, check docs impact, and request clean-context review guidance.
----
-
-# AgentKit Skill
-
-This repository uses AgentKit.
-
-## What AgentKit Gives You
-
-AgentKit keeps your work tied to durable repo intent. Use it to:
-
-- find the docs and components relevant to a task
-- remember the task's closeout gates
-- check docs impact and architecture rules
-- get lifecycle reminders while you work
-- ask for clean-context review before human attention
-- close the task as completed or blocked
-
-The skill is an operating guide. For deeper product or architecture intent, read the durable docs that AgentKit returns.
-
-## Normal Operating Loop
-
-1. Start or resume the task with `agentkit start`.
-2. Read the durable intent sources in the output.
-3. If design is missing or ambiguous for product behavior, API, data model, workflow, architecture, or state transitions, ask the human before implementing that part.
-4. Implement against tests and the repo's architecture rules.
-5. Run `agentkit check` and read any lifecycle reminder it prints.
-6. Run `agentkit review-guidance` and request clean-context review when expected.
-7. Fix meaningful reviewer findings.
-8. Run `agentkit close --review-complete`, or close as blocked with a recorded human question.
-
-## Start Of Task
-
-Run:
-
-```text
-agentkit start
-```
-
-`start` writes repository-local task state under `.agentkit/`. In a read-only audit, do not run `start`; read this skill and use read-only commands such as `agentkit status` or `agentkit remind` instead.
-
-If you know the component, run:
-
-```text
-agentkit start --component <name>
-```
-
-After discussion clarifies the task, preserve the focus:
-
-```text
-agentkit start --task "<refined task>" --focus-note "<human-approved focus>" --focus-doc <path>
-```
-
-Configured components: {component_names}
-
-## During Design
-
-Use:
-
-```text
-agentkit intent-guidance --component <name> --change-type <type>
-```
-
-Write the actual design content yourself. AgentKit tells you where it belongs.
-
-Useful change-type values include `architecture`, `data_model`, `public_api`, `orchestration`, `workflow`, `tests`, and `docs`.
-
-For docs-only wording tasks, ask the human for design only when the wording changes product meaning, command semantics, public behavior, workflow expectations, or accepted terminology. For local copyedits that preserve meaning, proceed with focused docs checks and review expectations from AgentKit.
-
-## Before Review
-
-Run:
-
-```text
-agentkit check
-agentkit review-guidance
-```
-
-If review is expected, spawn or request a clean-context reviewer with the guidance AgentKit returns.
-
-Do not treat review as a transcript storage task. AgentKit only needs the main agent to acknowledge that the review loop was completed for the current diff. If review reveals durable design, risk, or testing knowledge, record that in the repository docs.
-
-For low-risk docs-only wording changes, review may still be expected by local policy. Use `agentkit review-guidance` to decide. If review is not required and the change is truly low risk, close with the local skip-review path only when AgentKit allows it.
-
-## Lifecycle Reminders
-
-Use:
-
-```text
-agentkit status
-agentkit remind
-```
-
-`status` shows task facts and missing gates. `remind` shows the next action. `agentkit check` may also include lifecycle reminders.
-
-For a local reminder loop, use:
-
-```text
-agentkit watch
-```
-
-## Close Task
-
-Before ending the task, run:
-
-```text
-agentkit close --review-complete
-```
-
-If blocked on human input, run:
-
-```text
-agentkit close --blocked-question "..."
-```
-
-Use blocked close when continuing would require an unsupported assumption. Include the human question clearly.
-"""
+    source = repo / config.skills.source
+    template = source.read_text(encoding="utf-8") if source.exists() else DEFAULT_SKILL_MD
+    content = template.replace("{{ component_names }}", component_names)
     output.write_text(content, encoding="utf-8")
-    return section("Skill Generated", [relpath(output, repo)])
+    return "\n\n".join(
+        [
+            section("Skill Generated", [relpath(output, repo)]),
+            section("Skill Source", [relpath(source, repo) if source.exists() else "built-in default"]),
+        ]
+    )
 
 
 def validate_manifest(repo: Path, config: AgentKitConfig) -> list[str]:
@@ -763,12 +876,88 @@ def _ensure_agentkit_agents_section(path: Path, created: list[str], force: bool)
     created.append(f"{path.name} AgentKit section")
 
 
+def _ensure_agentkit_marketplace_entry(path: Path, created: list[str], force: bool) -> None:
+    agentkit_entry = {
+        "name": "agentkit",
+        "source": {
+            "source": "local",
+            "path": "./plugins/agentkit",
+        },
+        "policy": {
+            "installation": "AVAILABLE",
+            "authentication": "ON_INSTALL",
+        },
+        "category": "Productivity",
+    }
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(DEFAULT_CODEX_MARKETPLACE_JSON, encoding="utf-8")
+        created.append(path.as_posix())
+        return
+    data = json.loads(path.read_text(encoding="utf-8") or "{}")
+    if not isinstance(data, dict):
+        raise ValueError(".agents/plugins/marketplace.json must contain a JSON object")
+    data.setdefault("name", "agentkit-local")
+    interface = data.setdefault("interface", {})
+    if isinstance(interface, dict):
+        interface.setdefault("displayName", "AgentKit Local")
+    plugins = data.setdefault("plugins", [])
+    if not isinstance(plugins, list):
+        raise ValueError(".agents/plugins/marketplace.json plugins field must be a list")
+    for index, item in enumerate(plugins):
+        if isinstance(item, dict) and item.get("name") == "agentkit":
+            if force or not _is_agentkit_marketplace_entry(item):
+                plugins[index] = agentkit_entry
+                path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+                created.append("marketplace AgentKit entry")
+            return
+    plugins.append(agentkit_entry)
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    created.append("marketplace AgentKit entry")
+
+
 def _agents_path(repo: Path) -> Path:
     for name in ["AGENTS.md", "agents.md"]:
         candidate = repo / name
         if candidate.exists():
             return candidate
     return repo / "AGENTS.md"
+
+
+def _has_agentkit_marketplace_entry(path: Path) -> bool:
+    if not path.exists():
+        return False
+    data = json.loads(path.read_text(encoding="utf-8") or "{}")
+    if not isinstance(data, dict):
+        return False
+    plugins = data.get("plugins")
+    if not isinstance(plugins, list):
+        return False
+    return any(isinstance(item, dict) and _is_agentkit_marketplace_entry(item) for item in plugins)
+
+
+def _is_agentkit_marketplace_entry(item: dict[str, object]) -> bool:
+    source = item.get("source")
+    policy = item.get("policy")
+    return (
+        item.get("name") == "agentkit"
+        and isinstance(source, dict)
+        and source.get("source") == "local"
+        and source.get("path") == "./plugins/agentkit"
+        and isinstance(policy, dict)
+        and policy.get("installation") == "AVAILABLE"
+        and policy.get("authentication") == "ON_INSTALL"
+        and item.get("category") == "Productivity"
+    )
+
+
+def _repo_from_hook_payload(default_repo: Path, payload: dict[str, object]) -> Path:
+    cwd = payload.get("cwd")
+    start = Path(str(cwd)).resolve() if cwd else default_repo
+    for candidate in [start, *start.parents]:
+        if (candidate / "agentkit.yml").exists():
+            return candidate
+    return default_repo
 
 
 def _component_label(component: ComponentConfig) -> str:

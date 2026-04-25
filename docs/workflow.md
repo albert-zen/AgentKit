@@ -64,10 +64,12 @@ Recommended initialized surfaces:
 - `docs/decisions/`
 - `docs/specs/active/`
 - `docs/specs/completed/`
-- `.codex/skills/agentkit/SKILL.md`
+- `plugins/agentkit/.codex-plugin/plugin.json`
+- `plugins/agentkit/skills/agentkit/SKILL.md`
+- `.agents/plugins/marketplace.json`
 - optional Git hooks through `agentkit install-hooks`
 
-The `AGENTS.md` entry should stay intentionally small: a low-level AgentKit section that says the repo uses AgentKit to maintain agent-led changes and points to `agentkit start`, `agentkit check`, `agentkit status` or `agentkit remind`, `agentkit close`, and the generated skill.
+The `AGENTS.md` entry should stay intentionally small: a low-level AgentKit section that says the repo uses AgentKit to maintain agent-led changes and points to `agentkit start`, `agentkit check`, `agentkit status` or `agentkit remind`, `agentkit close`, and the AgentKit plugin skill.
 
 The initialized repo should answer:
 
@@ -346,7 +348,7 @@ Reminder behavior must be stateful:
 
 ## 6.5. Skills As Agent Onboarding
 
-The generated AgentKit skill is the operating manual for agents using AgentKit in a repository.
+The AgentKit plugin skill is the operating manual for agents using AgentKit in a repository.
 
 It should help a capable agent answer:
 
@@ -411,4 +413,4 @@ The MVP does not need a daemon or hosted control plane.
 
 The lifecycle extension adds `agentkit status` and `agentkit remind` so agents and adapters can sample task state directly.
 
-Post-agent reminders can be delivered by AgentKit's own lightweight `agentkit watch` adapter, ProjectMan, Symphony, editor integrations, agent runtime hooks, or other local triggers.
+Post-agent reminders can be delivered by AgentKit's own lightweight `agentkit watch` adapter, ProjectMan, Symphony, editor integrations, agent runtime hooks, or other local triggers. For Codex, the natural distribution surface is the AgentKit plugin: the plugin bundles the skill and can declare the Stop-hook adapter that calls `agentkit codex-stop-hook`.

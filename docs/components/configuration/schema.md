@@ -8,6 +8,8 @@
 - `layers`
 - `review`
 - `skills`
+  - `source`: canonical skill source path, defaulting to `plugins/agentkit/skills/agentkit/SKILL.md`
+  - `output`: skill output path, defaulting to `plugins/agentkit/skills/agentkit/SKILL.md`
 
 ## Components
 

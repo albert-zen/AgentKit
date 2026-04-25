@@ -19,7 +19,7 @@ AgentKit should not depend on one runtime as the only path. It should provide po
 - Markdown guidance
 - YAML configuration
 - CLI output
-- generated skills
+- Codex plugin-packaged skills
 - repository-local checks
 
 Runtime-specific integrations can come later.
@@ -225,7 +225,7 @@ Vision issues:
 - `init` should become a repo readiness audit, not only a scaffold command.
 - `init` should report whether docs, component mappings, architecture rules, hooks, and skills are present.
 - `doctor` should provide that readiness audit without mutating files.
-- `init` should keep root agent guidance small and point to the generated skill for the full operating guide.
+- `init` should keep root agent guidance small and point to the AgentKit plugin skill for the full operating guide.
 - `start` should support explicit task updates, such as focus notes, focus docs, task ids, and refined plans.
 - `close` should explain missing gates in a way agents can act on immediately.
 - task state should distinguish current focus, original task todo, human-approved constraints, receipts, and blocked handoff notes.
@@ -246,9 +246,9 @@ Next improvements:
 
 - richer task updates for focus docs, focus notes, planned checks, and changed scope
 - clearer task history beyond the single default `current` task
-- generated skills that teach the full using-AgentKit protocol, not only command names
+- Codex plugin-packaged skills that teach the full using-AgentKit protocol, not only command names
 - mock-agent adoption tests that verify a clean agent can use the skill and CLI without inheriting chat context
-- runtime guidance for ensuring agents can read the generated skill file
+- runtime guidance for ensuring agents can read the AgentKit plugin skill
 
 Success criteria:
 
@@ -442,6 +442,6 @@ Mitigation:
 - What should the first `agentkit.yml` schema look like?
 - How should a code change record "docs checked, no update needed"?
 - Should `review-guidance` inspect git diff automatically or rely on explicit changed paths?
-- Where should generated skills live by default?
+- Which plugin or skill package formats should AgentKit support after Codex?
 - What should strict mode enforce versus warn?
 - Should `agentkit orient` be path-based only in MVP, or accept free-form task text too?

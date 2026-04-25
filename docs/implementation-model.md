@@ -59,7 +59,7 @@ Outputs:
 - starter architecture rules
 - optional AgentKit skill
 
-When writing `AGENTS.md`, `init` should create or append a concise low-level AgentKit section. The section should introduce AgentKit as the repo-local maintainability harness and point to the command entry points plus generated skill. It should not duplicate the generated skill.
+When writing `AGENTS.md`, `init` should create or append a concise low-level AgentKit section. The section should introduce AgentKit as the repo-local maintainability harness and point to the command entry points plus the AgentKit plugin skill. It should not duplicate the plugin skill.
 
 `init` should also guide the agent to configure the repository's maintainability system:
 
@@ -82,7 +82,7 @@ Outputs:
 - recommended actions for missing required surfaces
 - optional improvements for project-policy surfaces such as hooks or architecture layers
 
-The first implementation should check for AgentKit entry guidance in `AGENTS.md` or `agents.md`, `agentkit.yml`, valid manifest references, component mappings, docs, generated skill, and optional Git hooks.
+The first implementation should check for AgentKit entry guidance in `AGENTS.md` or `agents.md`, `agentkit.yml`, valid manifest references, component mappings, docs, the AgentKit plugin skill, and optional Git hooks.
 
 ## `agentkit start`
 
@@ -444,7 +444,7 @@ The skill should teach agents using AgentKit in the current repository:
 
 This is one of the main ways AgentKit gives value to agents without building a large platform.
 
-The generated skill is an operating guide, not a developer design doc. It should contain enough task protocol for a capable agent to use AgentKit well, while linking out to durable docs for product philosophy, component details, and long-term roadmap.
+The AgentKit skill is an operating guide, not a developer design doc. It should live in the AgentKit Codex plugin by default, contain enough task protocol for a capable agent to use AgentKit well, and link out to durable docs for product philosophy, component details, and long-term roadmap.
 
 ## Configuration Model
 
@@ -499,7 +499,8 @@ review:
   default: warn
 
 skills:
-  output: .codex/skills/agentkit/SKILL.md
+  source: plugins/agentkit/skills/agentkit/SKILL.md
+  output: plugins/agentkit/skills/agentkit/SKILL.md
 ```
 
 ## How The Three Key Supports Work
@@ -587,7 +588,7 @@ Repository setup:
 2. Configure `agentkit.yml`.
 3. Validate component docs and code paths.
 4. Run `agentkit install-hooks` to install deterministic Git checks.
-5. Generate `.codex/skills/agentkit/SKILL.md`.
+5. Generate `plugins/agentkit/skills/agentkit/SKILL.md` and expose it through `.agents/plugins/marketplace.json`.
 
 Concrete task:
 

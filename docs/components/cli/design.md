@@ -32,6 +32,7 @@ The CLI should stay thin. It should parse arguments and delegate behavior to com
 - `agentkit install-hooks`
 - `agentkit watch`
 - `agentkit skill`
+- `agentkit codex-stop-hook`
 
 ## Lifecycle Commands
 
@@ -58,6 +59,8 @@ The CLI should stay thin. It should parse arguments and delegate behavior to com
 ## Hook Commands
 
 `install-hooks` installs Git-triggered deterministic hooks. It should not create a separate manual pre-commit workflow for agents.
+
+`codex-stop-hook` is the Codex Stop-hook adapter used by the AgentKit plugin. It reads Codex hook JSON from stdin, samples AgentKit lifecycle state, and returns a Codex continuation response only when the task still needs closeout work.
 
 ## Watch Command
 

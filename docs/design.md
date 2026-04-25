@@ -131,7 +131,7 @@ AgentKit should encourage agents to:
 
 The repository should teach future agents how to work in it.
 
-AgentKit supports this through root guidance, generated skills, local commands, and repository-aware conventions.
+AgentKit supports this through root guidance, plugin-packaged skills, local commands, and repository-aware conventions.
 
 ### Maintainability Signals
 
@@ -158,7 +158,7 @@ If an intention only exists in a chat thread or in someone's head, it will event
 
 The root agent instruction file should be short. It should tell agents where to look, how to decide what to read, and what rules are mandatory. Detailed knowledge should live in structured docs.
 
-`agentkit init` should keep this surface small. It may create or append a low-level AgentKit section that explains the repository uses AgentKit for maintainable agent-led changes and points agents to the CLI entry points and generated skill. It should not put the full AgentKit workflow or product philosophy into `AGENTS.md`.
+`agentkit init` should keep this surface small. It may create or append a low-level AgentKit section that explains the repository uses AgentKit for maintainable agent-led changes and points agents to the CLI entry points and AgentKit plugin skill. It should not put the full AgentKit workflow or product philosophy into `AGENTS.md`.
 
 ### Documentation Should Become Executable When It Matters
 
@@ -416,7 +416,7 @@ The reviewer should produce:
 
 ### 6. Agent Skills
 
-When an agent platform supports skills, AgentKit should provide an AgentKit skill that teaches agents how to use the repository's AgentKit setup.
+When an agent platform supports skills, AgentKit should provide an AgentKit skill that teaches agents how to use the repository's AgentKit setup. For Codex, the preferred distribution shape is a repo-local plugin under `plugins/agentkit/` exposed through `.agents/plugins/marketplace.json`.
 
 The skill is for agents using AgentKit inside a target repository. It is not the north-star product design for agents developing AgentKit itself.
 
@@ -776,13 +776,13 @@ AgentKit may optionally emit a durable context summary for external systems, but
 
 Explain repository readiness for agent-first development.
 
-`doctor` should audit whether the repository has the AgentKit entry guidance, config, docs, valid mappings, generated skill, and optional hook setup. It reports missing readiness items and optional improvements without changing files.
+`doctor` should audit whether the repository has the AgentKit entry guidance, config, docs, valid mappings, plugin-packaged skill, and optional hook setup. It reports missing readiness items and optional improvements without changing files.
 
 ### `agentkit skill`
 
 Generate or update an AgentKit usage skill for the current repository.
 
-The skill should be concise and repository-aware. It should point agents to local docs, local commands, and local decision rules instead of restating the whole documentation tree.
+The skill should be concise and repository-aware. It should point agents to local docs, local commands, and local decision rules instead of restating the whole documentation tree. By default, it should live inside the AgentKit Codex plugin rather than only under a runtime-private `.codex/skills` path.
 
 ## Review Loop
 
@@ -831,7 +831,7 @@ The skill should be rich enough to shape another capable agent's behavior withou
 
 For deeper product intent, the skill should point to the repository docs instead of restating them.
 
-Mock-agent adoption tests should be used to calibrate this surface. If a clean agent can read the skill and explain when to start, ask for design, run checks, request review, and close, then the skill is carrying useful operational knowledge. If the agent cannot read the skill because of runtime permissions, AgentKit should fail gracefully through CLI guidance and root docs, but the runtime integration should still grant read access to the generated skill.
+Mock-agent adoption tests should be used to calibrate this surface. If a clean agent can read the skill and explain when to start, ask for design, run checks, request review, and close, then the skill is carrying useful operational knowledge. If the agent cannot read the skill because of runtime permissions, AgentKit should fail gracefully through CLI guidance and root docs, but the runtime integration should still grant read access to the plugin skill.
 
 ## Relationship to Other Tools
 
@@ -881,7 +881,7 @@ The lifecycle-focused iteration adds `agentkit status` and `agentkit remind` as 
 - Should AgentKit integrate directly with ProjectMan issue documents, or keep that as an adapter?
 - Should TDD be a hard requirement or a recommended mode?
 - How should projects define "non-trivial change" for clean-context review?
-- Should AgentKit skills live under `.codex/skills`, `docs/skills`, or a configurable path?
+- Which non-Codex plugin formats should AgentKit generate after the Codex plugin surface is stable?
 
 ## Design Principle
 

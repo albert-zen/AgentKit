@@ -41,3 +41,4 @@ Watch command coverage should verify:
 - `watch --once` emits one reminder and exits
 - `watch` stops reminding for completed or traceably blocked tasks
 - `watch` does not spawn agents or manage jobs
+- `codex-stop-hook` returns a Codex continuation response only while lifecycle gates are missing

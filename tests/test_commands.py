@@ -1,8 +1,10 @@
 from pathlib import Path
+import json
 
 from agentkit.commands import (
     close_task,
     check,
+    codex_stop_hook,
     docs_impact,
     doctor,
     generate_skill,
@@ -70,6 +72,77 @@ def test_init_updates_existing_lowercase_agents_file(tmp_path: Path) -> None:
     assert "### AgentKit" in agents
 
 
+def test_init_creates_codex_plugin_skill_surface(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+
+    plugin = json.loads((tmp_path / "plugins" / "agentkit" / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    hooks = json.loads((tmp_path / "plugins" / "agentkit" / "hooks.json").read_text(encoding="utf-8"))
+    marketplace = json.loads((tmp_path / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
+    skill = tmp_path / "plugins" / "agentkit" / "skills" / "agentkit" / "SKILL.md"
+
+    assert plugin["name"] == "agentkit"
+    assert plugin["skills"] == "./skills/"
+    assert plugin["hooks"] == "./hooks.json"
+    assert hooks["hooks"]["Stop"][0]["hooks"][0]["command"] == "agentkit codex-stop-hook"
+    assert skill.exists()
+    assert marketplace["plugins"][0]["source"]["path"] == "./plugins/agentkit"
+
+
+def test_init_appends_agentkit_to_existing_codex_marketplace(tmp_path: Path) -> None:
+    (tmp_path / ".agents" / "plugins").mkdir(parents=True)
+    (tmp_path / ".agents" / "plugins" / "marketplace.json").write_text(
+        json.dumps(
+            {
+                "name": "existing",
+                "interface": {"displayName": "Existing"},
+                "plugins": [
+                    {
+                        "name": "other-plugin",
+                        "source": {"source": "local", "path": "./plugins/other-plugin"},
+                        "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
+                        "category": "Productivity",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    init_repo(tmp_path)
+
+    marketplace = json.loads((tmp_path / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
+    plugin_names = [item["name"] for item in marketplace["plugins"]]
+    agentkit = next(item for item in marketplace["plugins"] if item["name"] == "agentkit")
+    assert plugin_names == ["other-plugin", "agentkit"]
+    assert agentkit["source"]["path"] == "./plugins/agentkit"
+
+
+def test_doctor_reports_marketplace_without_agentkit_entry(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    marketplace = tmp_path / ".agents" / "plugins" / "marketplace.json"
+    marketplace.write_text(
+        json.dumps(
+            {
+                "name": "existing",
+                "plugins": [
+                    {
+                        "name": "other-plugin",
+                        "source": {"source": "local", "path": "./plugins/other-plugin"},
+                        "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
+                        "category": "Productivity",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    code, output = doctor(tmp_path)
+
+    assert code == 1
+    assert "AgentKit Codex marketplace is missing" in output
+
+
 def test_doctor_reports_missing_readiness_items(tmp_path: Path) -> None:
     code, output = doctor(tmp_path)
 
@@ -90,6 +163,7 @@ def test_doctor_reports_ready_initialized_repo(tmp_path: Path) -> None:
     assert code == 0
     assert "ready" in output
     assert "AGENTS.md contains AgentKit entry guidance" in output
+    assert "canonical AgentKit skill source exists" in output
 
 
 def test_doctor_respects_configured_doc_paths(tmp_path: Path) -> None:
@@ -366,6 +440,29 @@ def test_watch_exits_without_open_task(tmp_path: Path) -> None:
     assert "No AgentKit task is open" in outputs[0]
 
 
+def test_codex_stop_hook_blocks_when_task_needs_closeout(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    start_task(tmp_path, component_names=["core"])
+    payload = json.dumps({"cwd": str(tmp_path), "hook_event_name": "Stop"})
+
+    code, output = codex_stop_hook(tmp_path, payload)
+
+    assert code == 0
+    result = json.loads(output)
+    assert result["decision"] == "block"
+    assert "AgentKit has not reached a valid closeout state" in result["reason"]
+    assert "missing check receipt" in result["reason"]
+
+
+def test_codex_stop_hook_is_quiet_without_open_task(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+
+    code, output = codex_stop_hook(tmp_path, json.dumps({"cwd": str(tmp_path)}))
+
+    assert code == 0
+    assert output == ""
+
+
 def test_blocked_task_reminds_when_diff_changes(tmp_path: Path) -> None:
     import subprocess
 
@@ -516,7 +613,7 @@ def test_generate_skill_includes_lifecycle_commands(tmp_path: Path) -> None:
 
     generate_skill(tmp_path)
 
-    skill = (tmp_path / ".codex" / "skills" / "agentkit" / "SKILL.md").read_text(encoding="utf-8")
+    skill = (tmp_path / "plugins" / "agentkit" / "skills" / "agentkit" / "SKILL.md").read_text(encoding="utf-8")
     assert "Normal Operating Loop" in skill
     assert "ask the human" in skill
     assert "start` writes repository-local task state" in skill

@@ -43,7 +43,8 @@ class ReviewConfig:
 
 @dataclass(frozen=True)
 class SkillConfig:
-    output: str = ".codex/skills/agentkit/SKILL.md"
+    source: str = "plugins/agentkit/skills/agentkit/SKILL.md"
+    output: str = "plugins/agentkit/skills/agentkit/SKILL.md"
 
 
 @dataclass(frozen=True)
@@ -109,7 +110,10 @@ def parse_config(raw: dict[str, Any]) -> AgentKitConfig:
         default=str(review_raw.get("default", "warn")),
     )
 
-    skills = SkillConfig(output=str(skills_raw.get("output", ".codex/skills/agentkit/SKILL.md")))
+    skills = SkillConfig(
+        source=str(skills_raw.get("source", "plugins/agentkit/skills/agentkit/SKILL.md")),
+        output=str(skills_raw.get("output", "plugins/agentkit/skills/agentkit/SKILL.md")),
+    )
 
     return AgentKitConfig(
         version=int(raw.get("version", 1)),

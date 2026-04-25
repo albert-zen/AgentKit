@@ -12,7 +12,7 @@ AgentKit's own configuration maps lifecycle modules explicitly. The current repo
 - component mappings
 - layer dependency rules
 - review policy
-- skill output location
+- skill source and output locations
 
 ## Boundary
 

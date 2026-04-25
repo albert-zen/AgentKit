@@ -1,0 +1,19 @@
+{
+  "name": "agentkit",
+  "version": "0.1.0",
+  "description": "Repo-local maintainability workflow for agent-led coding tasks.",
+  "skills": "./skills/",
+  "hooks": "./hooks.json",
+  "interface": {
+    "displayName": "AgentKit",
+    "shortDescription": "Keep agent-led code changes tied to durable intent, checks, review, and closeout.",
+    "longDescription": "AgentKit teaches coding agents how to start tasks, read durable intent, run repository checks, request review, and close or block work traceably.",
+    "developerName": "AgentKit",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": [
+      "Use AgentKit to start this task and follow the repository closeout workflow.",
+      "Use AgentKit to check whether this task is ready for review and closeout."
+    ]
+  }
+}

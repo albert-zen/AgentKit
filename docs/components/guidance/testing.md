@@ -13,7 +13,7 @@ Guidance tests should use small temporary repositories and assert that AgentKit 
 - hook installation behavior
 - status and reminder output
 - watch once output
-- generated skill operating-loop guidance
+- AgentKit plugin skill operating-loop guidance
 
 The tests should not assert exact prose unless the wording is part of the contract.
 
@@ -56,7 +56,7 @@ Reminder tests should eventually verify:
 - `check`, `status`, `remind`, and `watch` derive reminders from the same sampler
 - reminder rendering does not change task state beyond the normal receipt side effects of the command that displays it
 
-Skill tests should verify that generated skills teach:
+Skill tests should verify that the AgentKit plugin skill teaches:
 
 - the normal AgentKit operating loop
 - when to ask the human for design
@@ -66,7 +66,7 @@ Skill tests should verify that generated skills teach:
 - review acknowledgement without storing reviewer transcripts
 - status/remind/watch usage
 
-Mock-agent adoption tests should ask a clean agent to use the generated skill for a small representative task and report the workflow it would follow. Useful failures include missing command side-effect warnings, unclear docs-only review policy, and unavailable skill file access in the agent runtime.
+Mock-agent adoption tests should ask a clean agent to use the AgentKit plugin skill for a small representative task and report the workflow it would follow. Useful failures include missing command side-effect warnings, unclear docs-only review policy, and unavailable skill file access in the agent runtime.
 
 Agent instruction tests should verify that `init` keeps `AGENTS.md` concise and does not duplicate the full skill or product design there.
 
@@ -76,6 +76,13 @@ Watcher tests should eventually verify:
 - watcher output is stateful and does not repeat closed or blocked tasks
 - watcher configuration cannot turn AgentKit into a job runner
 - local notification failures are reported without corrupting task state
+
+Codex plugin tests should verify:
+
+- `init` creates `plugins/agentkit/.codex-plugin/plugin.json`
+- `init` creates `plugins/agentkit/skills/agentkit/SKILL.md`
+- `init` creates `.agents/plugins/marketplace.json`
+- the plugin declares the AgentKit Stop-hook adapter when that adapter is part of the runtime integration
 
 ## Hook Tests
 

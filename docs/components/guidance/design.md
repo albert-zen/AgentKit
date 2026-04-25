@@ -11,7 +11,7 @@ The guidance component gives the implementing agent practical next steps:
 - whether docs may be stale
 - what review guidance should be used
 - how to start and close a task responsibly
-- how to learn the using-AgentKit operating loop from the generated skill
+- how to learn the using-AgentKit operating loop from the AgentKit plugin skill
 
 ## Owned Concepts
 
@@ -32,12 +32,12 @@ Guidance should not replace semantic reasoning by the LLM. It should route, remi
 
 Generated guidance should distinguish two audiences:
 
-- agents using AgentKit need a concise operating protocol through the generated skill
+- agents using AgentKit need a concise operating protocol through the AgentKit plugin skill
 - agents developing AgentKit need the durable product and component docs
 
-The generated skill should therefore explain how AgentKit helps the current task, when to run commands, when to ask for human design, and how to handle review and closeout. It should point to deeper docs instead of restating the full product roadmap.
+The AgentKit skill should therefore explain how AgentKit helps the current task, when to run commands, when to ask for human design, and how to handle review and closeout. For Codex, that skill should be bundled through the AgentKit plugin rather than treated as a private `.codex` file. It should point to deeper docs instead of restating the full product roadmap.
 
-Root agent guidance is even smaller than the skill. The AgentKit section in `AGENTS.md` should only introduce AgentKit as the maintainability harness and point to the CLI and generated skill.
+Root agent guidance is even smaller than the skill. The AgentKit section in `AGENTS.md` should only introduce AgentKit as the maintainability harness and point to the CLI and plugin skill.
 
 The skill should also explain command side effects and common ambiguity points:
 
