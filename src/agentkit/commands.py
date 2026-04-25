@@ -64,7 +64,7 @@ skills:
 
 DEFAULT_SKILL_MD = """---
 name: agentkit
-description: Use AgentKit to orient coding agents, enforce repository-local maintainability rules, check docs impact, and request clean-context review guidance.
+description: Preserve human intent and project maintainability by guiding agents to read durable intent files and persist meaningful design, docs, and test changes.
 ---
 
 # AgentKit Skill
@@ -201,13 +201,13 @@ Use blocked close when continuing would require an unsupported assumption. Inclu
 DEFAULT_CODEX_PLUGIN_JSON = """{
   "name": "agentkit",
   "version": "0.1.0",
-  "description": "Repo-local maintainability workflow for agent-led coding tasks.",
+  "description": "Preserve human intent and project maintainability by guiding agents to read durable intent files and persist meaningful design, docs, and test changes.",
   "skills": "./skills/",
   "hooks": "./hooks.json",
   "interface": {
     "displayName": "AgentKit",
-    "shortDescription": "Keep agent-led code changes tied to durable intent, checks, review, and closeout.",
-    "longDescription": "AgentKit teaches coding agents how to start tasks, read durable intent, run repository checks, request review, and close or block work traceably.",
+    "shortDescription": "Preserve human intent and project maintainability through durable intent files.",
+    "longDescription": "AgentKit guides coding agents to read durable intent files before work and persist meaningful design, documentation, and test changes after work.",
     "developerName": "AgentKit",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],

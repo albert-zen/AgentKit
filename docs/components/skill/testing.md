@@ -11,6 +11,7 @@ Tests should verify that initialized repositories expose AgentKit through Codex'
 Skill content tests should verify that the bundled skill teaches:
 
 - why AgentKit exists for the current repo
+- the skill and plugin descriptions emphasize human intent, maintainability, durable intent files, and persistence of meaningful design/docs/test changes
 - when to run `agentkit start` for repository-changing work
 - when not to start a task for read-only exploration or question-answering
 - when to ask the human for missing design

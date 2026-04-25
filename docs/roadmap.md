@@ -30,6 +30,8 @@ AgentKit cannot perfectly infer human intent from code changes.
 
 Early versions should ask agents to record or identify intent explicitly instead of pretending to reconstruct it automatically.
 
+Current association discovery is intentionally rule-based: component mappings, path patterns, keywords, and deterministic lint-style checks can point agents to likely related files, but they cannot reliably recover deeper semantic relationships or human taste. Future versions may add lightweight semantic retrieval or small-model assistance to suggest additional intent files, prior decisions, or testing guidance. Those suggestions should remain advisory until a human or implementing agent confirms them.
+
 ### 3. Documentation Freshness Is Probabilistic
 
 A docs-impact check can identify likely affected docs, but it cannot always know whether docs truly need updates.
@@ -333,13 +335,15 @@ Goal: Reduce the cost of placing design intent correctly.
 Capabilities:
 
 - suggest affected docs from task text plus git diff
+- suggest semantically related intent files beyond explicit path mappings
+- use lightweight retrieval or small-model assistance to find likely relevant human intent, taste, prior decisions, and testing expectations
 - suggest ADR creation for cross-cutting decisions
 - generate testing checklist from design docs
 - provide templates for missing component docs
 
 Important constraint:
 
-AgentKit should not treat inferred intent as authoritative. The LLM agent and human own semantic intent. AgentKit routes, reminds, and templates.
+AgentKit should not treat inferred intent as authoritative. The LLM agent and human own semantic intent. AgentKit routes, reminds, templates, and may propose likely associations for confirmation.
 
 Success criteria:
 

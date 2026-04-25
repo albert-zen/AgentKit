@@ -1,6 +1,6 @@
 ---
 name: agentkit
-description: Use AgentKit to orient coding agents, enforce repository-local maintainability rules, check docs impact, and request clean-context review guidance.
+description: Preserve human intent and project maintainability by guiding agents to read durable intent files and persist meaningful design, docs, and test changes.
 ---
 
 # AgentKit Skill

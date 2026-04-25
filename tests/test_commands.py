@@ -83,6 +83,8 @@ def test_init_creates_codex_plugin_skill_surface(tmp_path: Path) -> None:
     skill = tmp_path / "plugins" / "agentkit" / "skills" / "agentkit" / "SKILL.md"
 
     assert plugin["name"] == "agentkit"
+    assert "Preserve human intent and project maintainability" in plugin["description"]
+    assert "durable intent files" in plugin["interface"]["shortDescription"]
     assert plugin["skills"] == "./skills/"
     assert plugin["hooks"] == "./hooks.json"
     assert hooks["hooks"]["Stop"][0]["hooks"][0]["command"] == "agentkit codex-stop-hook"
@@ -765,6 +767,8 @@ def test_generate_skill_includes_lifecycle_commands(tmp_path: Path) -> None:
     generate_skill(tmp_path)
 
     skill = (tmp_path / "plugins" / "agentkit" / "skills" / "agentkit" / "SKILL.md").read_text(encoding="utf-8")
+    assert "Preserve human intent and project maintainability" in skill
+    assert "persist meaningful design, docs, and test changes" in skill
     assert "When To Start A Task" in skill
     assert "Repository-Changing Operating Loop" in skill
     assert "read-only exploration" in skill
