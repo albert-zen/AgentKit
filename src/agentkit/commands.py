@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import ast
+import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 from agentkit.config import AgentKitConfig, ComponentConfig, LayerConfig, load_config
 from agentkit.fs import expand_patterns, matches_any, relpath
-from agentkit.git import changed_paths, is_git_repo
+from agentkit.git import changed_paths, diff_fingerprint, git_path, is_git_repo
 from agentkit.render import bullet, section
 
 
@@ -16,8 +17,8 @@ DEFAULT_AGENT_MD = """# AGENTS.md
 This repository uses AgentKit.
 
 Before changing code:
-- Run `agentkit orient` with the relevant component, task, or changed paths.
-- Read the docs AgentKit recommends.
+- Run `agentkit start` with the relevant component, task, or changed paths.
+- Read the durable intent sources and docs AgentKit recommends.
 - Ask the human for design when AgentKit reports a design gap for a product, architecture, API, data model, workflow, or state-machine change.
 
 After changing code:
@@ -25,6 +26,7 @@ After changing code:
 - Run `agentkit check`.
 - Update docs when behavior, architecture, public contracts, workflows, data models, or testing strategy changed.
 - Run `agentkit review-guidance` for non-trivial work.
+- Run `agentkit close --review-complete` before ending a reviewed task. If blocked, record the human question with `agentkit close --blocked-question "..."`.
 """
 
 
@@ -101,8 +103,177 @@ def init_repo(repo: Path, force: bool = False) -> str:
     ]:
         directory.mkdir(parents=True, exist_ok=True)
     _write_if_missing(repo / "docs" / "design.md", "# Design\n\nStatus: Draft\n", created, force)
+    _write_if_missing(repo / "docs" / "workflow.md", "# Workflow\n\nStatus: Draft\n", created, force)
     _write_if_missing(repo / "docs" / "architecture" / "dependency-rules.md", "# Dependency Rules\n", created, force)
     return section("AgentKit Init", bullet(created or ["No files changed"]))
+
+
+def start_task(
+    repo: Path,
+    component_names: list[str] | None = None,
+    paths: list[str] | None = None,
+    task: str | None = None,
+    plan: str | None = None,
+) -> str:
+    config = load_config(repo)
+    changed = paths or (changed_paths(repo) if is_git_repo(repo) else [])
+    components = find_components(config, changed, component_names or [], task or "")
+    docs = recommended_docs(repo, config, components)
+    gaps = design_gaps(repo, components)
+    checks = suggested_checks(config, components)
+    review_expected = _review_expected(config, components, task or "")
+    task_dir = repo / ".agentkit" / "tasks"
+    task_dir.mkdir(parents=True, exist_ok=True)
+    task_id = "current"
+    state = {
+        "task_id": task_id,
+        "status": "open",
+        "task": task or "",
+        "plan": plan or "",
+        "components": [component.name for component in components],
+        "durable_intent_sources": docs,
+        "changed_paths": changed,
+        "design_gaps": gaps,
+        "suggested_checks": checks,
+        "review_expected": review_expected,
+        "diff_fingerprint": diff_fingerprint(repo),
+    }
+    (task_dir / f"{task_id}.json").write_text(json.dumps(state, indent=2), encoding="utf-8")
+    return "\n\n".join(
+        [
+            section("Task Started", [task_id]),
+            section("Durable Intent Sources", bullet(docs)),
+            section("Affected Components", bullet([_component_label(item) for item in components])),
+            section("Potential Design Gaps", bullet(gaps)),
+            section("Suggested Tests And Checks", bullet(checks)),
+            section("Review Expected", ["yes" if review_expected else "not required by current AgentKit policy"]),
+        ]
+    )
+
+
+def close_task(
+    repo: Path,
+    task_id: str | None = None,
+    blocked_question: str | None = None,
+    review_complete: bool = False,
+    skip_review_reason: str | None = None,
+) -> tuple[int, str]:
+    task_name = task_id or "current"
+    task_path = repo / ".agentkit" / "tasks" / f"{task_name}.json"
+    state: dict[str, object] = {}
+    if task_path.exists():
+        state = json.loads(task_path.read_text(encoding="utf-8"))
+    current_changes = changed_paths(repo) if is_git_repo(repo) else []
+    current_fingerprint = diff_fingerprint(repo)
+    if not task_path.exists():
+        return (
+            1,
+            "\n\n".join(
+                [
+                    section("Close Status", ["needs_work"]),
+                    section("Missing Task State", ["Run `agentkit start` before closing a task."]),
+                ]
+            ),
+        )
+    if blocked_question:
+        state.update(
+            {
+                "task_id": task_name,
+                "status": "blocked",
+                "blocked_question": blocked_question,
+                "open_changes": current_changes,
+                "diff_fingerprint": current_fingerprint,
+            }
+        )
+        task_path.parent.mkdir(parents=True, exist_ok=True)
+        task_path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+        return (
+            0,
+            "\n\n".join(
+                [
+                    section("Close Status", ["blocked"]),
+                    section("Blocked Human Question", [blocked_question]),
+                    section("Next Step", ["Wait for human input before continuing this task."]),
+                ]
+            ),
+        )
+    if current_changes:
+        return (
+            1,
+            "\n\n".join(
+                [
+                    section("Close Status", ["needs_work"]),
+                    section("Open Changes", bullet(current_changes)),
+                    section(
+                        "Required Action",
+                        [
+                            "Commit or intentionally stage/handoff the changes according to local policy.",
+                            "If blocked on human input, run `agentkit close --blocked-question \"...\"`.",
+                        ],
+                    ),
+                ]
+            ),
+        )
+    check_receipt = repo / ".agentkit" / "receipts" / "checks" / f"{current_fingerprint}.json"
+    if not check_receipt.exists():
+        return (
+            1,
+            "\n\n".join(
+                [
+                    section("Close Status", ["needs_work"]),
+                    section("Missing Check Receipt", ["Run `agentkit check` for the current diff before closing."]),
+                ]
+            ),
+        )
+    if review_complete:
+        state["review_complete"] = True
+        state["review_fingerprint"] = current_fingerprint
+    if skip_review_reason:
+        state["skip_review_reason"] = skip_review_reason
+        state["skip_review_fingerprint"] = current_fingerprint
+    has_current_review = state.get("review_complete") and state.get("review_fingerprint") == current_fingerprint
+    has_current_skip = state.get("skip_review_reason") and state.get("skip_review_fingerprint") == current_fingerprint
+    if state.get("review_expected") and not has_current_review and not has_current_skip:
+        task_path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+        return (
+            1,
+            "\n\n".join(
+                [
+                    section("Close Status", ["needs_work"]),
+                    section(
+                        "Missing Review Receipt",
+                        ["Pass `--review-complete` after review loop, or `--skip-review-reason \"...\"` for low-risk work."],
+                    ),
+                ]
+            ),
+        )
+    state.update({"task_id": task_name, "status": "completed", "diff_fingerprint": current_fingerprint})
+    task_path.parent.mkdir(parents=True, exist_ok=True)
+    task_path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+    return (0, section("Close Status", ["completed"]))
+
+
+def install_hooks(repo: Path, force: bool = False) -> str:
+    if not is_git_repo(repo):
+        raise ValueError("install-hooks requires a Git repository")
+    hook_path = git_path(repo, "hooks/pre-commit")
+    if hook_path.exists() and not force:
+        return section("Hooks", ["pre-commit already exists; use --force to overwrite"])
+    hook_path.parent.mkdir(parents=True, exist_ok=True)
+    hook_path.write_text(
+        "#!/bin/sh\n"
+        "agentkit check\n",
+        encoding="utf-8",
+    )
+    hook_path.chmod(0o755)
+    return section("Hooks Installed", [relpath(hook_path, repo)])
+
+
+def _write_receipt(repo: Path, kind: str, fingerprint: str, payload: dict[str, str]) -> None:
+    receipt_dir = repo / ".agentkit" / "receipts" / kind
+    receipt_dir.mkdir(parents=True, exist_ok=True)
+    content = {"fingerprint": fingerprint, **payload}
+    (receipt_dir / f"{fingerprint}.json").write_text(json.dumps(content, indent=2), encoding="utf-8")
 
 
 def orient(
@@ -210,7 +381,10 @@ def check(repo: Path) -> tuple[int, str]:
         impact_text,
         lint_text,
     ]
-    return (1 if errors or lint_code else 0, "\n\n".join(parts))
+    code = 1 if errors or lint_code else 0
+    if code == 0:
+        _write_receipt(repo, "checks", diff_fingerprint(repo), {"status": "passed"})
+    return (code, "\n\n".join(parts))
 
 
 def review_guidance(
@@ -272,13 +446,13 @@ This repository uses AgentKit.
 Run:
 
 ```text
-agentkit orient
+agentkit start
 ```
 
 If you know the component, run:
 
 ```text
-agentkit orient --component <name>
+agentkit start --component <name>
 ```
 
 Configured components: {component_names}
@@ -303,6 +477,20 @@ agentkit review-guidance
 ```
 
 If review is expected, spawn or request a clean-context reviewer with the guidance AgentKit returns.
+
+## Close Task
+
+Before ending the task, run:
+
+```text
+agentkit close --review-complete
+```
+
+If blocked on human input, run:
+
+```text
+agentkit close --blocked-question "..."
+```
 """
     output.write_text(content, encoding="utf-8")
     return section("Skill Generated", [relpath(output, repo)])

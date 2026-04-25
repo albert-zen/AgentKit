@@ -6,13 +6,16 @@ from pathlib import Path
 
 from agentkit.commands import (
     check,
+    close_task,
     docs_impact,
     generate_skill,
     init_repo,
+    install_hooks,
     intent_guidance,
     lint_architecture,
     orient,
     review_guidance,
+    start_task,
 )
 
 
@@ -24,6 +27,12 @@ def main(argv: list[str] | None = None) -> None:
 
     init_parser = subparsers.add_parser("init")
     init_parser.add_argument("--force", action="store_true")
+
+    start_parser = subparsers.add_parser("start")
+    start_parser.add_argument("--component", action="append", default=[])
+    start_parser.add_argument("--path", action="append", default=[])
+    start_parser.add_argument("--task", default="")
+    start_parser.add_argument("--plan", default="")
 
     orient_parser = subparsers.add_parser("orient")
     orient_parser.add_argument("--component", action="append", default=[])
@@ -41,6 +50,15 @@ def main(argv: list[str] | None = None) -> None:
     subparsers.add_parser("check")
     subparsers.add_parser("skill")
 
+    close_parser = subparsers.add_parser("close")
+    close_parser.add_argument("--task-id")
+    close_parser.add_argument("--blocked-question")
+    close_parser.add_argument("--review-complete", action="store_true")
+    close_parser.add_argument("--skip-review-reason")
+
+    hooks_parser = subparsers.add_parser("install-hooks")
+    hooks_parser.add_argument("--force", action="store_true")
+
     review_parser = subparsers.add_parser("review-guidance")
     review_parser.add_argument("--component", action="append", default=[])
     review_parser.add_argument("--path", action="append", default=[])
@@ -52,6 +70,8 @@ def main(argv: list[str] | None = None) -> None:
     try:
         if args.command == "init":
             print(init_repo(repo, force=args.force))
+        elif args.command == "start":
+            print(start_task(repo, component_names=args.component, paths=args.path, task=args.task, plan=args.plan))
         elif args.command == "orient":
             print(orient(repo, component_names=args.component, paths=args.path, task=args.task))
         elif args.command == "intent-guidance":
@@ -66,6 +86,18 @@ def main(argv: list[str] | None = None) -> None:
             code, output = check(repo)
             print(output)
             raise SystemExit(code)
+        elif args.command == "close":
+            code, output = close_task(
+                repo,
+                task_id=args.task_id,
+                blocked_question=args.blocked_question,
+                review_complete=args.review_complete,
+                skip_review_reason=args.skip_review_reason,
+            )
+            print(output)
+            raise SystemExit(code)
+        elif args.command == "install-hooks":
+            print(install_hooks(repo, force=args.force))
         elif args.command == "review-guidance":
             print(review_guidance(repo, component_names=args.component, paths=args.path, task=args.task))
         elif args.command == "skill":

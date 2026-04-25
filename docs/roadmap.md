@@ -71,6 +71,20 @@ Create a default structure:
 - `docs/decisions/*`
 - optional skill skeleton
 
+### Task Lifecycle State
+
+Track a lightweight task record for agent work:
+
+- task id
+- durable intent sources
+- relevant docs
+- affected components
+- expected checks
+- review requirement
+- diff fingerprints
+- close status
+- blocked human question, when applicable
+
 ### Manifest Validation
 
 Check that `agentkit.yml` references existing docs and code paths.
@@ -114,6 +128,12 @@ Return instructions for the implementing agent:
 - what risks to check
 - how to instruct the clean-context reviewer
 
+### Git Hook Installation
+
+Install standard Git hooks that run deterministic AgentKit checks at Git boundaries.
+
+The early version should focus on `pre-commit` running `agentkit check`. AgentKit does not need a separate user-facing `agentkit precommit` workflow; Git is the trigger.
+
 ### Skill Generation
 
 Generate a repository-local AgentKit skill that teaches agents:
@@ -152,23 +172,29 @@ Goal: Provide useful repository-local guidance with minimal automation.
 Commands:
 
 - `agentkit init`
+- `agentkit start`
 - `agentkit check`
 - `agentkit orient`
 - `agentkit docs-impact`
 - `agentkit lint-architecture`
 - `agentkit intent-guidance`
 - `agentkit review-guidance`
+- `agentkit close`
+- `agentkit install-hooks`
 - `agentkit skill`
 
 Capabilities:
 
 - create docs skeleton
+- create and close lightweight task records
 - validate manifest
 - orient agents at task start or continuation
 - warn on likely stale docs
 - check Python import layering
 - generate intent placement guidance
 - generate review guidance
+- verify closeout requirements before final handoff
+- install deterministic Git hooks
 - generate a local skill
 
 Success criteria:
@@ -241,11 +267,13 @@ Capabilities:
 - optional durable review context summaries for external systems
 - optional review result parsing
 - integration with systems like Symphony or ProjectMan agent runs
+- post-agent reminder adapters that detect open tasks and ask the agent to run `agentkit close`
 
 Success criteria:
 
 - The implementing agent can reliably perform one review-fix loop before human attention.
 - Review outputs consistently focus on intent drift, tests, docs, and architecture.
+- Open tasks are not silently abandoned when the runtime supports reminders.
 
 ## Phase 6: Maintainability Reports
 

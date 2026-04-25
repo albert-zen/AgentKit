@@ -244,6 +244,69 @@ AgentKit provides:
 - impact analysis over code and documentation changes
 - prompts, skills, or instructions that guide agents through implementation and review
 
+## Task Lifecycle Model
+
+AgentKit should treat agent work as an explicit task lifecycle.
+
+### 1. Start
+
+At task start, the implementing agent runs `agentkit start`.
+
+The start command should create or update a lightweight task record that captures:
+
+- durable human intent source paths
+- docs the agent should keep in working memory
+- likely affected components
+- likely code areas
+- planned validation commands
+- whether review is expected
+- whether design appears missing
+- the agent's current implementation plan, if one exists
+
+`agentkit start` should build on `orient`; it should not replace the agent's own planning ability. Its job is to make the task's durable context explicit and recoverable.
+
+### 2. Work
+
+During implementation, the agent can return to the task record to recover context it may have forgotten.
+
+The task record should help answer:
+
+- What human intent am I implementing?
+- Which docs are authoritative?
+- Which files or components are in scope?
+- What checks did I promise to run?
+- Is review required?
+- What is blocked on human input?
+
+### 3. Close
+
+Before ending a task, the implementing agent must run `agentkit close`.
+
+The close command checks whether the task has been responsibly closed:
+
+- relevant checks were run or intentionally skipped
+- docs impact was addressed
+- review loop was completed when required
+- blocking questions were recorded if the work cannot continue
+- git status is clean or the agent has committed/staged according to the local policy
+- the final state is traceable to durable intent
+
+If the task is blocked on human input, `agentkit close` should still allow closure after the agent records the question, current state, and next action needed from the human.
+
+### 4. Reminder
+
+If a task has been started but not closed, an integration may re-activate the agent with a reminder:
+
+```text
+AgentKit found an open task that was not closed.
+Are you done, still working, or blocked waiting for human input?
+Run `agentkit close` before ending the task.
+```
+
+This reminder should be stateful, not noisy. Once the task is closed, it stops. If the task is blocked and closed with a recorded question, it should not keep nagging the agent until new input arrives.
+
+AgentKit itself may provide the local state model and CLI commands. Runtime-specific reminders can be implemented by adapters, ProjectMan, Symphony, editor integrations, or future agent platform hooks.
+
 ## Intent Injection Channels
 
 AgentKit uses several channels to inject human intent into agent work.
@@ -507,6 +570,23 @@ The value of `init` is not scaffolding for its own sake. It creates the durable 
 - which local commands agents should run
 - where an AgentKit skill should be generated
 
+### `agentkit start`
+
+Start or resume an AgentKit task.
+
+This command makes the task's working context explicit:
+
+- durable intent source paths
+- relevant docs
+- likely affected components
+- likely changed code areas
+- design gaps
+- suggested checks
+- review expectation
+- optional implementation plan
+
+`start` should call the same underlying analysis as `orient`, but it additionally writes a local task record so later commands can reason about whether the task was closed correctly.
+
 ### `agentkit orient`
 
 Tell an agent what to look at before starting or continuing work.
@@ -559,6 +639,29 @@ Run all configured checks:
 - docs-impact checks
 - architecture lint
 - optional generated-doc freshness checks
+
+### `agentkit close`
+
+Close the current AgentKit task.
+
+This command is a workflow gate for agents before final response or task handoff. It should check:
+
+- whether `agentkit check` has passed for the current diff
+- whether docs impact was addressed
+- whether review guidance was followed when review is expected
+- whether review -> fix -> review happened for non-trivial work
+- whether blocking human questions were recorded
+- whether the working tree has uncommitted changes when local policy expects a commit
+
+`close` should avoid infinite loops by using a task state file and diff fingerprint. If the diff has not changed since the last successful check or review receipt, AgentKit should not repeatedly ask for the same action. If the diff changes, related receipts become stale.
+
+### `agentkit install-hooks`
+
+Install repository-local Git hooks that invoke AgentKit checks automatically at Git boundaries.
+
+The first hook should be a standard `pre-commit` hook that runs deterministic checks such as `agentkit check`. Agents and humans should not need to remember a separate manual `agentkit precommit` command.
+
+The hook layer is for deterministic repository checks. It should not spawn reviewers or perform long-running LLM judgment.
 
 ### `agentkit plan <name>`
 
@@ -665,6 +768,7 @@ AgentKit does not replace coding agents. It gives them a clearer environment and
 The first useful version should include:
 
 - `agentkit init`
+- `agentkit start`
 - `agentkit check`
 - `agentkit orient`
 - `agentkit docs-impact`
@@ -672,6 +776,8 @@ The first useful version should include:
 - `agentkit intent-guidance`
 - optional `agentkit plan`
 - `agentkit review-guidance`
+- `agentkit close`
+- `agentkit install-hooks`
 - `agentkit skill`
 - default templates for `AGENTS.md`, docs, specs, and ADRs
 - a simple YAML manifest

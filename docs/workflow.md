@@ -12,6 +12,7 @@ The workflow is intentionally lighter than an industrial automation harness. It 
 
 ```text
 External requirement
+  -> agentkit start
   -> human-agent design discussion
   -> intent recording in repository docs
   -> derived tests and checks
@@ -19,8 +20,30 @@ External requirement
   -> docs and maintenance updates
   -> clean-context review
   -> fixes
+  -> agentkit close
   -> human attention
 ```
+
+## 0. Task Start
+
+When an agent begins a task in an AgentKit-enabled repository, it should run:
+
+```text
+agentkit start
+```
+
+The start step should establish the task's durable context:
+
+- human intent source docs
+- docs to keep in working memory
+- affected components
+- likely code areas
+- expected validation commands
+- review expectation
+- design gaps or blocked decisions
+- current implementation plan, when available
+
+This gives the agent a stable reference it can return to during long-running work. It also gives AgentKit enough state to tell whether the task was closed responsibly.
 
 ## 1. Requirement Intake and Design Discussion
 
@@ -238,6 +261,7 @@ If one part is blocked but other parts are clear, the agent should continue with
 
 AgentKit should help with:
 
+- starting and closing agent tasks with repository-local state
 - creating a maintainable documentation system when introduced to a project
 - mapping code components to documentation components
 - reminding agents to record human-approved intent
@@ -246,6 +270,7 @@ AgentKit should help with:
 - checking likely stale documentation
 - checking architecture boundaries
 - generating review guidance for the implementing agent
+- reminding agents to close open tasks through runtime adapters where available
 - generating or updating an AgentKit skill for the repository
 
 AgentKit should not need to:
@@ -254,6 +279,51 @@ AgentKit should not need to:
 - become a project management system
 - run all implementation work itself
 - force heavyweight ceremony on small tasks
+
+## 8.1 Task Close
+
+Every non-trivial task should end with:
+
+```text
+agentkit close
+```
+
+The close step checks whether the work is ready to hand back to the human or whether it should continue.
+
+`agentkit close` should check:
+
+- tests and AgentKit checks were run or intentionally skipped
+- docs impact was addressed
+- review loop was completed when required
+- meaningful reviewer findings were fixed
+- any blocking human question was recorded
+- git status is clean or the local policy explains what remains uncommitted
+
+If the agent is blocked waiting for human input, close should allow a blocked closure after the agent records:
+
+- the question
+- why it blocks progress
+- what work is already complete
+- what the next action should be after the human responds
+
+This gives the agent a sanctioned pushback path instead of forcing it to guess.
+
+In the MVP, successful `agentkit check` runs write local receipts keyed by the current diff fingerprint. `agentkit close` uses those receipts to avoid falsely completing work that has not passed the configured checks.
+
+## 8.2 Hooks And Reminders
+
+AgentKit should support two different hook layers.
+
+Git hooks are deterministic repository gates. `agentkit install-hooks` can install a standard `pre-commit` hook that runs `agentkit check`. This hook runs because Git invokes it; agents do not need to remember a separate pre-commit command.
+
+Agent lifecycle hooks are runtime integrations. When an environment supports a post-agent hook, scheduler, or ProjectMan/Symphony-style monitor, it can check for open AgentKit tasks and remind the agent to close them.
+
+Reminder behavior must be stateful:
+
+- no open task means no reminder
+- a closed task means no reminder
+- a blocked task with a recorded human question should wait for new input
+- the same unchanged diff should not trigger the same warning forever
 
 ## 9. Skill Considerations
 
@@ -281,11 +351,15 @@ For the first version, AgentKit does not need to automate the whole workflow.
 It should provide enough structure for agents and humans to follow the workflow manually:
 
 - project initialization templates
+- task start records
 - documentation placement rules
 - component-to-doc manifest
 - docs-impact warnings
 - architecture lint suggestions
 - review guidance generation
+- task closeout checks
+- blocked-task recording
+- deterministic Git hook installation
 - repository-specific skill generation
 
 This lets AgentKit become useful immediately while leaving room for deeper automation later.

@@ -57,6 +57,7 @@ Before requesting review, the implementing agent should:
 6. Note docs updates or explain why none were needed.
 7. Ask AgentKit for review guidance.
 8. Spawn or request a clean-context reviewer with that guidance when review is expected.
+9. Record the review result so `agentkit close` can verify the review loop.
 
 The implementing agent should not ask for human review while obvious test failures, architecture lint failures, or stale-doc warnings remain unresolved.
 
@@ -163,6 +164,8 @@ Recommended shape:
 The implementing agent should fix meaningful findings before involving the human.
 
 One review pass is not a loop. A review loop requires at least one review pass, a fix pass, and a second review pass after the fixes.
+
+`agentkit close` should treat a missing review loop as unfinished work when review is required. If the task is blocked before review can happen, the agent should record the blocking human question and close the task as blocked rather than silently ending.
 
 ## AgentKit Responsibilities
 

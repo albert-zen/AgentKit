@@ -12,16 +12,16 @@ This repository uses AgentKit.
 Run:
 
 ```text
-agentkit orient
+agentkit start
 ```
 
 If you know the component, run:
 
 ```text
-agentkit orient --component <name>
+agentkit start --component <name>
 ```
 
-Configured components: cli, configuration, docs, guidance
+Configured components: cli, configuration, docs, governance, guidance
 
 ## During Design
 
@@ -43,3 +43,17 @@ agentkit review-guidance
 ```
 
 If review is expected, spawn or request a clean-context reviewer with the guidance AgentKit returns.
+
+## Close Task
+
+Before ending the task, run:
+
+```text
+agentkit close --review-complete
+```
+
+If blocked on human input, run:
+
+```text
+agentkit close --blocked-question "..."
+```

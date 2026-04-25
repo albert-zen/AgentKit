@@ -19,6 +19,12 @@ AgentKit should be a real Git repository so its own `changed_paths`, `docs-impac
 
 Repository hygiene files such as `.gitignore` and package marker files should be mapped in `agentkit.yml` so future agents do not treat them as unrelated or unmapped changes.
 
+AgentKit task state and receipts should be local runtime state, not durable product documentation. `.agentkit/` is ignored by Git so temporary task records and check receipts do not become repository history by accident.
+
+Git hooks installed by AgentKit live under `.git/hooks/` and are local to the checkout. The durable intent is recorded in docs; the hook files are operational wiring.
+
+Hook installation should ask Git for the hook path instead of assuming `.git` is a directory. This keeps AgentKit compatible with linked worktrees.
+
 ## Non-Goals
 
 - AgentKit does not need a hosted repository or remote origin for the MVP.

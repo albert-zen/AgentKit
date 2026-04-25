@@ -46,6 +46,35 @@ Outputs:
 - starter architecture rules
 - optional AgentKit skill
 
+## `agentkit start`
+
+Start or resume an AgentKit task.
+
+Inputs:
+
+- task text
+- explicit component, optional
+- known durable intent docs, optional
+- expected changed paths, optional
+- implementation plan text, optional
+
+Outputs:
+
+- task id
+- durable intent source paths
+- docs to keep in working memory
+- affected components
+- likely code areas
+- suggested checks
+- review expectation
+- design gaps
+
+Side effect:
+
+- writes a repository-local task state file under `.agentkit/tasks/`
+
+`start` should reuse the same component and docs analysis as `orient`, but it persists enough state for `close` to evaluate whether the task was responsibly finished.
+
 ## `agentkit orient`
 
 Help an agent start or continue a task.
@@ -207,6 +236,57 @@ Run configured checks:
 - optional project commands
 
 This should be the command agents run before review.
+
+## `agentkit close`
+
+Close the current AgentKit task.
+
+Inputs:
+
+- task id, optional if there is only one open task
+- blocked question, optional
+- skip reason for review or tests, optional
+- validation summary, optional
+- review-complete flag, optional after the review loop has completed
+
+Checks:
+
+- current diff fingerprint
+- whether `agentkit check` has run for that fingerprint
+- whether docs impact was addressed
+- whether review is required
+- whether review -> fix -> review receipts exist when required
+- whether meaningful review findings remain
+- whether git status is clean or local policy allows uncommitted work
+- whether blocked human questions are recorded
+
+Outputs:
+
+- `completed`
+- `blocked`
+- `needs_work`
+
+`blocked` requires a recorded human question. It is not a silent escape hatch; it is a traceable handoff state for work that cannot responsibly continue without new human input.
+
+Blocked close requires an existing task state from `agentkit start`. It may record open changes as part of the handoff, but it should not create a task from scratch.
+
+The close command should not create an infinite loop. It should use receipts keyed by a diff fingerprint. If the diff has not changed, AgentKit should not repeat identical warnings after they have been acknowledged. If the diff changes, relevant check and review receipts become stale.
+
+The MVP receipt model starts with check receipts written by successful `agentkit check` runs. Review receipts may begin as an explicit close-time assertion such as `agentkit close --review-complete`, with richer reviewer-result parsing added later. Check and review acknowledgements must be keyed to the current diff fingerprint so they cannot be reused after later commits or edits.
+
+## `agentkit install-hooks`
+
+Install repository-local hooks.
+
+Initial hook:
+
+- `.git/hooks/pre-commit` runs `agentkit check`
+
+This should be a normal Git hook, not a separate manual command agents must remember. The purpose is to catch deterministic issues at the Git boundary.
+
+AgentKit should not use pre-commit hooks for long-running LLM review, sub-agent spawning, or semantic judgment.
+
+Hook installation should resolve the hook path through Git, so linked worktrees and non-standard Git directories are handled correctly.
 
 ## `agentkit review-guidance`
 
@@ -396,11 +476,14 @@ Minimum slice:
 
 1. Load `agentkit.yml`.
 2. Validate component docs and code paths.
-3. Run `agentkit orient --paths <changed paths>` or `agentkit orient --component orchestration`.
-4. Run `agentkit intent-guidance --component orchestration --change-type orchestration`.
-5. Run `agentkit docs-impact`.
-6. Run `agentkit lint-architecture` for Python imports.
-7. Run `agentkit review-guidance`.
-8. Generate `.codex/skills/agentkit/SKILL.md`.
+3. Run `agentkit start` to persist task context and durable intent sources.
+4. Run `agentkit orient --path <changed path>` or `agentkit orient --component orchestration`.
+5. Run `agentkit intent-guidance --component orchestration --change-type orchestration`.
+6. Run `agentkit docs-impact`.
+7. Run `agentkit lint-architecture` for Python imports.
+8. Run `agentkit review-guidance`.
+9. Run `agentkit close` to verify closeout or record a blocked human question.
+10. Run `agentkit install-hooks` to install deterministic Git checks.
+11. Generate `.codex/skills/agentkit/SKILL.md`.
 
 If this works for ProjectMan's Symphony integration, AgentKit has proven its first useful value.

@@ -1,8 +1,18 @@
 from pathlib import Path
 
-from agentkit.commands import docs_impact, init_repo, lint_architecture, orient, review_guidance
+from agentkit.commands import (
+    close_task,
+    docs_impact,
+    generate_skill,
+    init_repo,
+    install_hooks,
+    lint_architecture,
+    orient,
+    review_guidance,
+    start_task,
+)
 from agentkit.cli import _normalize_global_repo_arg
-from agentkit.git import changed_paths
+from agentkit.git import changed_paths, diff_fingerprint, git_path
 
 
 def test_init_and_orient(tmp_path: Path) -> None:
@@ -11,6 +21,211 @@ def test_init_and_orient(tmp_path: Path) -> None:
 
     assert "Affected Components" in output
     assert "docs/design.md" in output
+
+
+def test_start_task_writes_state_with_durable_sources(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+
+    output = start_task(tmp_path, component_names=["core"], task="implement core flow")
+
+    assert "Task Started" in output
+    assert "Durable Intent Sources" in output
+    assert "docs/design.md" in output
+    state = tmp_path / ".agentkit" / "tasks" / "current.json"
+    assert state.exists()
+    assert '"status": "open"' in state.read_text(encoding="utf-8")
+
+
+def test_close_task_reports_needs_work_for_open_changes(tmp_path: Path) -> None:
+    import subprocess
+
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    init_repo(tmp_path)
+    start_task(tmp_path, component_names=["core"])
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "example.py").write_text("VALUE = 1\n", encoding="utf-8")
+
+    code, output = close_task(tmp_path)
+
+    assert code == 1
+    assert "needs_work" in output
+    assert "Open Changes" in output
+
+
+def test_close_task_allows_blocked_question(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    start_task(tmp_path, component_names=["core"])
+
+    code, output = close_task(tmp_path, blocked_question="Which API shape should this use?")
+
+    assert code == 0
+    assert "blocked" in output
+    assert "Which API shape" in output
+
+
+def test_blocked_close_records_open_changes(tmp_path: Path) -> None:
+    import json
+    import subprocess
+
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    init_repo(tmp_path)
+    start_task(tmp_path, component_names=["core"])
+    (tmp_path / "notes.md").write_text("blocked detail\n", encoding="utf-8")
+
+    code, output = close_task(tmp_path, blocked_question="Need product decision")
+
+    state = json.loads((tmp_path / ".agentkit" / "tasks" / "current.json").read_text(encoding="utf-8"))
+    assert code == 0
+    assert "blocked" in output
+    assert "notes.md" in state["open_changes"]
+
+
+def test_close_task_requires_started_task_for_blocked_question(tmp_path: Path) -> None:
+    code, output = close_task(tmp_path, blocked_question="Need human input")
+
+    assert code == 1
+    assert "Missing Task State" in output
+
+
+def test_close_task_requires_started_task(tmp_path: Path) -> None:
+    code, output = close_task(tmp_path)
+
+    assert code == 1
+    assert "Missing Task State" in output
+
+
+def test_close_task_requires_check_receipt(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    start_task(tmp_path, component_names=["core"])
+
+    code, output = close_task(tmp_path, skip_review_reason="low risk")
+
+    assert code == 1
+    assert "Missing Check Receipt" in output
+
+
+def test_close_task_requires_review_or_skip_for_review_expected(tmp_path: Path) -> None:
+    from agentkit.commands import check
+
+    init_repo(tmp_path)
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "example.py").write_text("VALUE = 1\n", encoding="utf-8")
+    start_task(tmp_path, component_names=["core"])
+    check(tmp_path)
+
+    code, output = close_task(tmp_path)
+
+    assert code == 1
+    assert "Missing Review Receipt" in output
+
+
+def test_close_task_completes_after_check_and_review(tmp_path: Path) -> None:
+    from agentkit.commands import check
+
+    init_repo(tmp_path)
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "example.py").write_text("VALUE = 1\n", encoding="utf-8")
+    start_task(tmp_path, component_names=["core"])
+    check(tmp_path)
+
+    code, output = close_task(tmp_path, review_complete=True)
+
+    assert code == 0
+    assert "completed" in output
+
+
+def test_close_task_rejects_clean_tree_receipt_from_previous_head(tmp_path: Path) -> None:
+    import subprocess
+    from agentkit.commands import check
+
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "agentkit@example.com"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "AgentKit"], cwd=tmp_path, check=True)
+    init_repo(tmp_path)
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "example.py").write_text("VALUE = 1\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "initial"], cwd=tmp_path, check=True, capture_output=True)
+    check(tmp_path)
+    start_task(tmp_path, component_names=["core"])
+    (tmp_path / "src" / "example.py").write_text("VALUE = 2\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "change"], cwd=tmp_path, check=True, capture_output=True)
+
+    code, output = close_task(tmp_path, review_complete=True)
+
+    assert code == 1
+    assert "Missing Check Receipt" in output
+
+
+def test_close_task_rejects_review_receipt_from_previous_head(tmp_path: Path) -> None:
+    import subprocess
+    from agentkit.commands import check
+
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "agentkit@example.com"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "AgentKit"], cwd=tmp_path, check=True)
+    init_repo(tmp_path)
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "example.py").write_text("VALUE = 1\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "initial"], cwd=tmp_path, check=True, capture_output=True)
+    start_task(tmp_path, component_names=["core"])
+    check(tmp_path)
+    close_task(tmp_path, review_complete=True)
+    (tmp_path / "src" / "example.py").write_text("VALUE = 2\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "change"], cwd=tmp_path, check=True, capture_output=True)
+    check(tmp_path)
+
+    code, output = close_task(tmp_path)
+
+    assert code == 1
+    assert "Missing Review Receipt" in output
+
+
+def test_install_hooks_writes_git_pre_commit(tmp_path: Path) -> None:
+    import subprocess
+
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+
+    output = install_hooks(tmp_path)
+
+    hook = tmp_path / ".git" / "hooks" / "pre-commit"
+    assert "Hooks Installed" in output
+    assert hook.exists()
+    assert "agentkit check" in hook.read_text(encoding="utf-8")
+
+
+def test_install_hooks_uses_git_path_for_worktree(tmp_path: Path) -> None:
+    import subprocess
+
+    repo = tmp_path / "repo"
+    worktree = tmp_path / "linked"
+    repo.mkdir()
+    subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "agentkit@example.com"], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.name", "AgentKit"], cwd=repo, check=True)
+    (repo / "README.md").write_text("# Repo\n", encoding="utf-8")
+    subprocess.run(["git", "add", "README.md"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "worktree", "add", str(worktree)], cwd=repo, check=True, capture_output=True)
+
+    install_hooks(worktree)
+
+    hook = git_path(worktree, "hooks/pre-commit")
+    assert hook.exists()
+    assert "agentkit check" in hook.read_text(encoding="utf-8")
+
+
+def test_generate_skill_includes_lifecycle_commands(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+
+    generate_skill(tmp_path)
+
+    skill = (tmp_path / ".codex" / "skills" / "agentkit" / "SKILL.md").read_text(encoding="utf-8")
+    assert "agentkit start" in skill
+    assert "agentkit close" in skill
 
 
 def test_orient_task_matching_ignores_common_words(tmp_path: Path) -> None:
@@ -309,6 +524,29 @@ def test_changed_paths_includes_untracked_files(tmp_path: Path) -> None:
     (tmp_path / "docs" / "new.md").write_text("# New\n", encoding="utf-8")
 
     assert "docs/new.md" in changed_paths(tmp_path)
+
+
+def test_changed_paths_excludes_agentkit_runtime_state(tmp_path: Path) -> None:
+    import subprocess
+
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    (tmp_path / ".agentkit" / "tasks").mkdir(parents=True)
+    (tmp_path / ".agentkit" / "tasks" / "current.json").write_text("{}", encoding="utf-8")
+
+    assert changed_paths(tmp_path) == []
+
+
+def test_diff_fingerprint_includes_untracked_file_content(tmp_path: Path) -> None:
+    import subprocess
+
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    file_path = tmp_path / "notes.md"
+    file_path.write_text("one\n", encoding="utf-8")
+    first = diff_fingerprint(tmp_path)
+    file_path.write_text("two\n", encoding="utf-8")
+    second = diff_fingerprint(tmp_path)
+
+    assert first != second
 
 
 def test_repo_arg_can_appear_after_subcommand() -> None:
