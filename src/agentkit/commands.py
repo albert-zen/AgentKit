@@ -520,7 +520,8 @@ def close_task(
         state["skip_review_reason"] = skip_review_reason
         state["skip_review_fingerprint"] = current_fingerprint
     has_current_review = state.get("review_complete") and state.get("review_fingerprint") == current_fingerprint
-    if state.get("review_expected") and not has_current_review:
+    has_current_skip = state.get("skip_review_reason") and state.get("skip_review_fingerprint") == current_fingerprint
+    if state.get("review_expected") and not has_current_review and not has_current_skip:
         write_task_state(repo, state, task_name)
         return (
             1,
@@ -534,9 +535,13 @@ def close_task(
                 ]
             ),
         )
-    state.update({"task_id": task_name, "status": "completed", "diff_fingerprint": current_fingerprint})
+    close_status = "completed"
+    state.update({"task_id": task_name, "status": close_status, "diff_fingerprint": current_fingerprint})
     write_task_state(repo, state, task_name)
-    return (0, section("Close Status", ["completed"]))
+    parts = [section("Close Status", [close_status])]
+    if has_current_skip:
+        parts.append(section("Review Skipped", [str(state["skip_review_reason"])]))
+    return (0, "\n\n".join(parts))
 
 
 def install_hooks(repo: Path, force: bool = False) -> str:

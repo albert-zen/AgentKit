@@ -104,12 +104,18 @@ def sample_lifecycle(repo: Path, task_id: str | None = None) -> LifecycleSample:
         actions.append("Run `agentkit check` for the current diff.")
 
     has_current_review = bool(state.get("review_complete")) and state.get("review_fingerprint") == current_fingerprint
-    if state.get("review_expected") and not has_current_review:
+    has_current_skip = bool(state.get("skip_review_reason")) and state.get("skip_review_fingerprint") == current_fingerprint
+    if state.get("review_expected") and not has_current_review and not has_current_skip:
         missing.append("missing required review receipt for current diff")
         actions.append("Run the review loop, then close with `agentkit close --review-complete`.")
 
     if not missing:
-        actions.append("Run `agentkit close --review-complete` if review was completed, or close normally if review is not required.")
+        if state.get("review_expected"):
+            actions.append(
+                "Run `agentkit close --review-complete` if review was completed, or `agentkit close --skip-review-reason \"...\"` for low-risk work."
+            )
+        else:
+            actions.append("Run `agentkit close`.")
 
     return LifecycleSample(
         task_id=task_name,
