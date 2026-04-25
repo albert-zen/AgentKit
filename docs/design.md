@@ -329,7 +329,7 @@ This reminder should be stateful, not noisy. Once the task is closed, it stops. 
 
 AgentKit itself may provide the local state model and CLI commands. Runtime-specific reminders can be implemented by adapters, ProjectMan, Symphony, editor integrations, or future agent platform hooks.
 
-AgentKit owns reminder truth, not necessarily reminder delivery. It can record open task state, decide whether a reminder is needed, and generate the reminder text. To wake a stopped agent or send a message into a running environment, AgentKit usually needs an external trigger such as an agent runtime hook, ProjectMan, Symphony, an editor integration, or a local scheduler.
+AgentKit owns reminder truth, and it may also ship a lightweight local watcher for reminder delivery. It can record open task state, decide whether a reminder is needed, and generate the reminder text. To wake a stopped agent or send a message into a running environment, AgentKit needs a delivery trigger: this can be an external adapter such as an agent runtime hook, ProjectMan, Symphony, an editor integration, or OS scheduler, or an AgentKit-owned `agentkit watch` process. The watcher should remain a local reminder adapter, not a general orchestrator.
 
 ## Intent Injection Channels
 

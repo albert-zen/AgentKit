@@ -62,7 +62,9 @@ Closeout should avoid noisy loops by using state:
 
 Fallback handling is part of guidance. If checks or review cannot proceed, the agent must record the reason and human question, then still use `agentkit close --blocked-question "..."`.
 
-Reminder guidance should distinguish state from delivery. AgentKit owns the open-task state, missing-gate detection, stale-receipt detection, and reminder text. Runtime adapters such as ProjectMan, Symphony, editor integrations, schedulers, or agent hooks own waking or messaging the agent.
+Reminder guidance should distinguish state from delivery. AgentKit owns the open-task state, missing-gate detection, stale-receipt detection, and reminder text. Delivery can come from runtime adapters such as ProjectMan, Symphony, editor integrations, schedulers, or agent hooks, and it can also come from an AgentKit-owned local `agentkit watch` process.
+
+`agentkit watch` should be treated as a first-party reminder adapter, not a new orchestration layer. It may poll local task state, emit reminder text, and call configured local notification commands. It should not spawn coding agents, manage queues, or perform semantic review.
 
 ## Hook Guidance
 

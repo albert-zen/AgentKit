@@ -302,7 +302,9 @@ Runtime integrations may provide post-agent or monitor hooks.
 
 Those integrations can detect open AgentKit tasks and re-activate the agent if the task has not been closed.
 
-AgentKit can determine that a reminder is needed and generate the reminder text from local task state. Delivering that reminder to a stopped agent usually requires an external trigger, such as an agent runtime hook, ProjectMan/Symphony monitor, editor integration, local scheduler, or future AgentKit watcher.
+AgentKit can determine that a reminder is needed and generate the reminder text from local task state. Delivering that reminder to a stopped agent requires a trigger, which may be an external integration or AgentKit's own lightweight local watcher.
+
+An `agentkit watch` process is an acceptable reminder adapter. It should poll or subscribe to local AgentKit task state, emit reminders for open tasks, and stay bounded to reminder delivery. It should not become a general agent orchestrator.
 
 Reminder behavior must be stateful:
 
@@ -362,4 +364,4 @@ Concrete task capabilities such as `start`, checks, review guidance, fallback, a
 
 The MVP does not need a daemon or hosted control plane.
 
-Post-agent reminders can be implemented later by ProjectMan, Symphony, editor integrations, or agent runtime hooks.
+Post-agent reminders can be implemented later by AgentKit's own lightweight `agentkit watch` adapter, ProjectMan, Symphony, editor integrations, agent runtime hooks, or other local triggers.

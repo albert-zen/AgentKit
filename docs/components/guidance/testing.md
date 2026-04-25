@@ -51,6 +51,13 @@ Reminder tests should eventually verify:
 - blocked tasks wait for new human input
 - stale receipts produce actionable missing-gate messages
 
+Watcher tests should eventually verify:
+
+- `agentkit watch` reuses the same reminder/status logic as the CLI
+- watcher output is stateful and does not repeat closed or blocked tasks
+- watcher configuration cannot turn AgentKit into a job runner
+- local notification failures are reported without corrupting task state
+
 ## Hook Tests
 
 `install-hooks` tests should verify that:

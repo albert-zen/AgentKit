@@ -302,6 +302,27 @@ Potential outputs:
 
 These commands would let AgentKit own reminder logic while allowing ProjectMan, Symphony, editor integrations, OS schedulers, or agent runtimes to own delivery.
 
+## Future `agentkit watch`
+
+AgentKit may provide a lightweight local watcher as a first-party reminder delivery adapter.
+
+Responsibilities:
+
+- read `.agentkit/` task state
+- detect open tasks that are not `completed` or traceably `blocked`
+- detect stale receipts and missing close gates
+- generate or emit reminder messages
+- optionally call configured local notification commands
+
+Non-responsibilities:
+
+- spawn coding agents
+- manage job queues
+- replace ProjectMan or Symphony
+- perform semantic LLM review
+
+`watch` should reuse the same status/reminder logic exposed by `status` or `remind`, so delivery remains separate from truth.
+
 ## `agentkit install-hooks`
 
 Install repository-local hooks.

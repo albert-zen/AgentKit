@@ -228,6 +228,7 @@ Vision issues:
 - `close` should explain missing gates in a way agents can act on immediately.
 - task state should distinguish current focus, original task todo, human-approved constraints, receipts, and blocked handoff notes.
 - reminders should be generated from open task state, not from chat memory.
+- a lightweight `agentkit watch` process is acceptable as an AgentKit-owned local adapter for delivering reminders on one machine.
 
 Success criteria:
 
@@ -246,12 +247,14 @@ AgentKit can do these things by itself:
 - compute whether receipts are stale for the current fingerprint
 - generate a reminder message for an open task
 - expose commands such as a future `agentkit remind` or `agentkit status`
+- run a lightweight local `agentkit watch` process that periodically checks open task state
 - run deterministic checks from Git hooks
 
-AgentKit usually needs an external trigger to deliver reminders after an agent has stopped.
+AgentKit usually needs a trigger to deliver reminders after an agent has stopped. That trigger may be external, or it may be AgentKit's own local watcher.
 
 Possible triggers:
 
+- AgentKit's own `agentkit watch` process
 - an agent runtime post-run hook
 - ProjectMan or Symphony monitoring an agent run
 - an editor integration
@@ -261,9 +264,9 @@ Possible triggers:
 The key design boundary:
 
 - AgentKit owns the repo-local truth: task state, receipts, rules, and reminder text.
-- Runtime adapters own delivery: when and how to wake or message an agent.
+- Delivery adapters own delivery: when and how to wake or message an agent. The adapter may be external, or it may be AgentKit's local watcher.
 
-AgentKit may later ship a lightweight local watcher, but that watcher is an adapter around AgentKit state, not the core product.
+AgentKit should be allowed to ship a lightweight local watcher. That watcher should stay small: it reads AgentKit state, emits reminders, and optionally calls configured local notification mechanisms. It should not become a general job orchestrator or agent runner.
 
 ## Phase 2: ProjectMan Dogfood Integration
 
