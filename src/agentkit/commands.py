@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import ast
-import json
-import sys
-from dataclasses import dataclass
 from pathlib import Path
 
 from agentkit.config import AgentKitConfig, ComponentConfig, LayerConfig, load_config
 from agentkit.fs import expand_patterns, matches_any, relpath
 from agentkit.git import changed_paths, diff_fingerprint, git_path, is_git_repo
+from agentkit.lifecycle import reminder_text, status_text
+from agentkit.receipts import has_receipt, write_receipt
 from agentkit.render import bullet, section
+from agentkit.task_state import DEFAULT_TASK_ID, load_task_state, task_path, write_task_state
 
 
 DEFAULT_AGENT_MD = """# AGENTS.md
@@ -122,9 +122,7 @@ def start_task(
     gaps = design_gaps(repo, components)
     checks = suggested_checks(config, components)
     review_expected = _review_expected(config, components, task or "")
-    task_dir = repo / ".agentkit" / "tasks"
-    task_dir.mkdir(parents=True, exist_ok=True)
-    task_id = "current"
+    task_id = DEFAULT_TASK_ID
     state = {
         "task_id": task_id,
         "status": "open",
@@ -138,7 +136,7 @@ def start_task(
         "review_expected": review_expected,
         "diff_fingerprint": diff_fingerprint(repo),
     }
-    (task_dir / f"{task_id}.json").write_text(json.dumps(state, indent=2), encoding="utf-8")
+    write_task_state(repo, state, task_id)
     return "\n\n".join(
         [
             section("Task Started", [task_id]),
@@ -158,14 +156,12 @@ def close_task(
     review_complete: bool = False,
     skip_review_reason: str | None = None,
 ) -> tuple[int, str]:
-    task_name = task_id or "current"
-    task_path = repo / ".agentkit" / "tasks" / f"{task_name}.json"
-    state: dict[str, object] = {}
-    if task_path.exists():
-        state = json.loads(task_path.read_text(encoding="utf-8"))
+    task_name = task_id or DEFAULT_TASK_ID
+    path = task_path(repo, task_name)
+    state = load_task_state(repo, task_name) or {}
     current_changes = changed_paths(repo) if is_git_repo(repo) else []
     current_fingerprint = diff_fingerprint(repo)
-    if not task_path.exists():
+    if not path.exists():
         return (
             1,
             "\n\n".join(
@@ -185,8 +181,7 @@ def close_task(
                 "diff_fingerprint": current_fingerprint,
             }
         )
-        task_path.parent.mkdir(parents=True, exist_ok=True)
-        task_path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+        write_task_state(repo, state, task_name)
         return (
             0,
             "\n\n".join(
@@ -214,8 +209,7 @@ def close_task(
                 ]
             ),
         )
-    check_receipt = repo / ".agentkit" / "receipts" / "checks" / f"{current_fingerprint}.json"
-    if not check_receipt.exists():
+    if not has_receipt(repo, "checks", current_fingerprint):
         return (
             1,
             "\n\n".join(
@@ -233,7 +227,7 @@ def close_task(
         state["skip_review_fingerprint"] = current_fingerprint
     has_current_review = state.get("review_complete") and state.get("review_fingerprint") == current_fingerprint
     if state.get("review_expected") and not has_current_review:
-        task_path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+        write_task_state(repo, state, task_name)
         return (
             1,
             "\n\n".join(
@@ -247,8 +241,7 @@ def close_task(
             ),
         )
     state.update({"task_id": task_name, "status": "completed", "diff_fingerprint": current_fingerprint})
-    task_path.parent.mkdir(parents=True, exist_ok=True)
-    task_path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+    write_task_state(repo, state, task_name)
     return (0, section("Close Status", ["completed"]))
 
 
@@ -266,13 +259,6 @@ def install_hooks(repo: Path, force: bool = False) -> str:
     )
     hook_path.chmod(0o755)
     return section("Hooks Installed", [relpath(hook_path, repo)])
-
-
-def _write_receipt(repo: Path, kind: str, fingerprint: str, payload: dict[str, str]) -> None:
-    receipt_dir = repo / ".agentkit" / "receipts" / kind
-    receipt_dir.mkdir(parents=True, exist_ok=True)
-    content = {"fingerprint": fingerprint, **payload}
-    (receipt_dir / f"{fingerprint}.json").write_text(json.dumps(content, indent=2), encoding="utf-8")
 
 
 def orient(
@@ -375,15 +361,24 @@ def check(repo: Path) -> tuple[int, str]:
     errors = validate_manifest(repo, config)
     lint_code, lint_text = lint_architecture(repo)
     impact_text = docs_impact(repo)
+    code = 1 if errors or lint_code else 0
+    if code == 0:
+        write_receipt(repo, "checks", diff_fingerprint(repo), {"status": "passed"})
     parts = [
         section("Manifest", ["OK"] if not errors else bullet(errors)),
         impact_text,
         lint_text,
+        section("Lifecycle Reminder", [reminder_text(repo)]),
     ]
-    code = 1 if errors or lint_code else 0
-    if code == 0:
-        _write_receipt(repo, "checks", diff_fingerprint(repo), {"status": "passed"})
     return (code, "\n\n".join(parts))
+
+
+def status_task(repo: Path, task_id: str | None = None) -> str:
+    return status_text(repo, task_id)
+
+
+def remind_task(repo: Path, task_id: str | None = None) -> str:
+    return reminder_text(repo, task_id)
 
 
 def review_guidance(
@@ -476,6 +471,23 @@ agentkit review-guidance
 ```
 
 If review is expected, spawn or request a clean-context reviewer with the guidance AgentKit returns.
+
+## Lifecycle Reminders
+
+Use:
+
+```text
+agentkit status
+agentkit remind
+```
+
+`status` shows task facts and missing gates. `remind` shows the next action. `agentkit check` may also include lifecycle reminders.
+
+For a local reminder loop, use:
+
+```text
+agentkit watch
+```
 
 ## Close Task
 

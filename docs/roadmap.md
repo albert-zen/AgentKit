@@ -233,6 +233,13 @@ Vision issues:
 - `check` may surface lifecycle reminders, but shared status/reminder logic should remain reusable by other commands.
 - a lightweight `agentkit watch` process is acceptable as an AgentKit-owned local adapter for delivering reminders on one machine.
 
+Implemented baseline:
+
+- shared lifecycle sampler module
+- `agentkit status`
+- `agentkit remind`
+- `agentkit watch --once` and continuous local watch loop
+
 Success criteria:
 
 - A new repo can run `agentkit init` and receive a clear maintainability readiness report.

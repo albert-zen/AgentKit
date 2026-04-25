@@ -32,6 +32,19 @@ Primary consumers:
 
 The output should be optimized for agents: clear, structured, copyable, and action-oriented.
 
+## Internal Architecture
+
+The implementation should keep command routing separate from lifecycle policy:
+
+- `cli.py` parses arguments and delegates.
+- `commands.py` keeps command-level orchestration and formatted outputs.
+- `task_state.py` owns `.agentkit/tasks/*.json` reads and writes.
+- `receipts.py` owns check and review receipt paths and writes.
+- `lifecycle.py` owns the shared task-state sampler, status facts, and reminder text.
+- `watch.py` owns the local reminder loop and delegates policy to `lifecycle.py`.
+
+The sampler should be reusable by `check`, `status`, `remind`, `watch`, and external adapters. It should not write state by itself; commands that already have receipt semantics, such as `check`, may still write their normal receipts.
+
 ## Core Commands
 
 ## `agentkit init`
@@ -291,7 +304,7 @@ The close command should not create an infinite loop. It should use receipts key
 
 The MVP receipt model starts with check receipts written by successful `agentkit check` runs. Review receipts may begin as an explicit close-time assertion such as `agentkit close --review-complete`, with richer reviewer-result parsing added later. Check and review acknowledgements must be keyed to the current diff fingerprint so they cannot be reused after later commits or edits.
 
-## Near-Term `agentkit status` / `agentkit remind`
+## `agentkit status` / `agentkit remind`
 
 AgentKit should expose task status and reminder generation as explicit commands backed by the same state sampler that `check` and `watch` use.
 
@@ -321,9 +334,9 @@ Run the missing gate, or close as blocked with a recorded human question if prog
 
 These commands let AgentKit own reminder logic while allowing AgentKit's own watcher, ProjectMan, Symphony, editor integrations, OS schedulers, or agent runtimes to own delivery.
 
-## Optional `agentkit watch`
+## `agentkit watch`
 
-AgentKit may provide a lightweight local watcher as a first-party reminder delivery adapter.
+AgentKit provides a lightweight local watcher as a first-party reminder delivery adapter.
 
 Responsibilities:
 

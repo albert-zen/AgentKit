@@ -14,9 +14,12 @@ from agentkit.commands import (
     intent_guidance,
     lint_architecture,
     orient,
+    remind_task,
     review_guidance,
     start_task,
+    status_task,
 )
+from agentkit.watch import watch_task
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -48,6 +51,10 @@ def main(argv: list[str] | None = None) -> None:
 
     subparsers.add_parser("lint-architecture")
     subparsers.add_parser("check")
+    status_parser = subparsers.add_parser("status")
+    status_parser.add_argument("--task-id")
+    remind_parser = subparsers.add_parser("remind")
+    remind_parser.add_argument("--task-id")
     subparsers.add_parser("skill")
 
     close_parser = subparsers.add_parser("close")
@@ -58,6 +65,10 @@ def main(argv: list[str] | None = None) -> None:
 
     hooks_parser = subparsers.add_parser("install-hooks")
     hooks_parser.add_argument("--force", action="store_true")
+
+    watch_parser = subparsers.add_parser("watch")
+    watch_parser.add_argument("--interval", type=float, default=30.0)
+    watch_parser.add_argument("--once", action="store_true")
 
     review_parser = subparsers.add_parser("review-guidance")
     review_parser.add_argument("--component", action="append", default=[])
@@ -86,6 +97,10 @@ def main(argv: list[str] | None = None) -> None:
             code, output = check(repo)
             print(output)
             raise SystemExit(code)
+        elif args.command == "status":
+            print(status_task(repo, task_id=args.task_id))
+        elif args.command == "remind":
+            print(remind_task(repo, task_id=args.task_id))
         elif args.command == "close":
             code, output = close_task(
                 repo,
@@ -98,6 +113,8 @@ def main(argv: list[str] | None = None) -> None:
             raise SystemExit(code)
         elif args.command == "install-hooks":
             print(install_hooks(repo, force=args.force))
+        elif args.command == "watch":
+            raise SystemExit(watch_task(repo, interval_seconds=args.interval, once=args.once))
         elif args.command == "review-guidance":
             print(review_guidance(repo, component_names=args.component, paths=args.path, task=args.task))
         elif args.command == "skill":

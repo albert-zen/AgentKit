@@ -2,17 +2,21 @@ from pathlib import Path
 
 from agentkit.commands import (
     close_task,
+    check,
     docs_impact,
     generate_skill,
     init_repo,
     install_hooks,
     lint_architecture,
     orient,
+    remind_task,
     review_guidance,
     start_task,
+    status_task,
 )
 from agentkit.cli import _normalize_global_repo_arg
 from agentkit.git import changed_paths, diff_fingerprint, git_path
+from agentkit.watch import watch_task
 
 
 def test_init_and_orient(tmp_path: Path) -> None:
@@ -102,6 +106,118 @@ def test_close_task_requires_check_receipt(tmp_path: Path) -> None:
 
     assert code == 1
     assert "Missing Check Receipt" in output
+
+
+def test_status_reports_missing_lifecycle_gates(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    start_task(tmp_path, component_names=["core"], task="implement core flow")
+
+    output = status_task(tmp_path)
+
+    assert "Lifecycle Status" in output
+    assert "needs_work" in output
+    assert "Missing Gates" in output
+    assert "Run `agentkit check`" in output
+
+
+def test_remind_reports_next_action_from_lifecycle_state(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    start_task(tmp_path, component_names=["core"], task="implement core flow")
+
+    output = remind_task(tmp_path)
+
+    assert "AgentKit Reminder" in output
+    assert "Run `agentkit check`" in output
+    assert "Run the review loop" in output
+
+
+def test_check_includes_lifecycle_reminder_and_writes_receipt(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "example.py").write_text("VALUE = 1\n", encoding="utf-8")
+    start_task(tmp_path, component_names=["core"], task="implement core flow")
+
+    code, output = check(tmp_path)
+
+    assert code == 0
+    assert "Lifecycle Reminder" in output
+    assert "Run the review loop" in output
+    assert "missing check receipt" not in output
+    receipt = tmp_path / ".agentkit" / "receipts" / "checks" / f"{diff_fingerprint(tmp_path)}.json"
+    assert receipt.exists()
+
+
+def test_remind_stops_for_blocked_task(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    start_task(tmp_path, component_names=["core"])
+    close_task(tmp_path, blocked_question="Need product decision")
+
+    output = remind_task(tmp_path)
+
+    assert "Task Blocked" in output
+    assert "Need product decision" in output
+    assert "No reminder will repeat" in output
+
+
+def test_watch_once_reuses_reminder_output(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    start_task(tmp_path, component_names=["core"])
+    outputs: list[str] = []
+
+    code = watch_task(tmp_path, once=True, output=outputs.append)
+
+    assert code == 0
+    assert len(outputs) == 1
+    assert "AgentKit Reminder" in outputs[0]
+
+
+def test_watch_stops_for_blocked_task(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    start_task(tmp_path, component_names=["core"])
+    close_task(tmp_path, blocked_question="Need product decision")
+    outputs: list[str] = []
+
+    code = watch_task(tmp_path, output=outputs.append)
+
+    assert code == 0
+    assert len(outputs) == 1
+    assert "Task Blocked" in outputs[0]
+
+
+def test_remind_is_quiet_without_open_task(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+
+    output = remind_task(tmp_path)
+
+    assert "No reminder needed" in output
+    assert "No AgentKit task is open" in output
+
+
+def test_watch_exits_without_open_task(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    outputs: list[str] = []
+
+    code = watch_task(tmp_path, output=outputs.append)
+
+    assert code == 0
+    assert len(outputs) == 1
+    assert "No AgentKit task is open" in outputs[0]
+
+
+def test_blocked_task_reminds_when_diff_changes(tmp_path: Path) -> None:
+    import subprocess
+
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    init_repo(tmp_path)
+    start_task(tmp_path, component_names=["core"])
+    (tmp_path / "notes.md").write_text("first\n", encoding="utf-8")
+    close_task(tmp_path, blocked_question="Need product decision")
+    (tmp_path / "notes.md").write_text("second\n", encoding="utf-8")
+
+    output = remind_task(tmp_path)
+
+    assert "stale" in output
+    assert "changed after it was blocked" in output
 
 
 def test_close_task_requires_review_or_skip_for_review_expected(tmp_path: Path) -> None:
@@ -240,6 +356,8 @@ def test_generate_skill_includes_lifecycle_commands(tmp_path: Path) -> None:
 
     skill = (tmp_path / ".codex" / "skills" / "agentkit" / "SKILL.md").read_text(encoding="utf-8")
     assert "agentkit start" in skill
+    assert "agentkit status" in skill
+    assert "agentkit remind" in skill
     assert "agentkit close" in skill
 
 

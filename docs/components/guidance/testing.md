@@ -11,6 +11,8 @@ Guidance tests should use small temporary repositories and assert that AgentKit 
 - task start output
 - task close status
 - hook installation behavior
+- status and reminder output
+- watch once output
 
 The tests should not assert exact prose unless the wording is part of the contract.
 

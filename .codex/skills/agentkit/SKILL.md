@@ -44,6 +44,23 @@ agentkit review-guidance
 
 If review is expected, spawn or request a clean-context reviewer with the guidance AgentKit returns.
 
+## Lifecycle Reminders
+
+Use:
+
+```text
+agentkit status
+agentkit remind
+```
+
+`status` shows task facts and missing gates. `remind` shows the next action. `agentkit check` may also include lifecycle reminders.
+
+For a local reminder loop, use:
+
+```text
+agentkit watch
+```
+
 ## Close Task
 
 Before ending the task, run:

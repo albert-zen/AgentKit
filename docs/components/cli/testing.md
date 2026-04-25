@@ -30,5 +30,6 @@ Hook command coverage should verify:
 Watch command coverage should verify:
 
 - `watch` calls the shared status/reminder logic
+- `watch --once` emits one reminder and exits
 - `watch` stops reminding for completed or traceably blocked tasks
 - `watch` does not spawn agents or manage jobs

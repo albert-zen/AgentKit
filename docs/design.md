@@ -837,7 +837,7 @@ The first useful version should include:
 - a simple YAML manifest
 - Python import graph checks
 
-The next lifecycle-focused iteration should add `agentkit status` and `agentkit remind` as first-class ways to sample task state. A lightweight `agentkit watch` command can follow as an optional local reminder adapter once the shared sampler exists.
+The lifecycle-focused iteration adds `agentkit status` and `agentkit remind` as first-class ways to sample task state. A lightweight `agentkit watch` command provides a local reminder adapter on top of the shared sampler.
 
 ## Open Questions
 

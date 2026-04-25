@@ -27,3 +27,12 @@ Each layer can define:
 - `may_import`
 
 Layer rules are project-specific. AgentKit provides a checking mechanism, not a universal architecture.
+
+AgentKit's own repo uses the same schema to express the lifecycle sampler boundary:
+
+- utility helpers such as task state and receipts sit below lifecycle policy
+- lifecycle policy may use utilities
+- command functions may use lifecycle policy
+- CLI routing may use commands and the watch adapter
+
+This is an example of the existing schema, not a new schema version.

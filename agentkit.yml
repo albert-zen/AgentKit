@@ -50,6 +50,10 @@ components:
       - src/agentkit/render.py
       - src/agentkit/git.py
       - src/agentkit/fs.py
+      - src/agentkit/lifecycle.py
+      - src/agentkit/receipts.py
+      - src/agentkit/task_state.py
+      - src/agentkit/watch.py
       - tests/test_commands.py
     docs:
       - docs/components/guidance/design.md
@@ -110,20 +114,30 @@ layers:
       - src/agentkit/fs.py
       - src/agentkit/git.py
       - src/agentkit/render.py
+      - src/agentkit/receipts.py
+      - src/agentkit/task_state.py
     may_import:
       - config
+  lifecycle:
+    paths:
+      - src/agentkit/lifecycle.py
+      - src/agentkit/watch.py
+    may_import:
+      - utilities
   commands:
     paths:
       - src/agentkit/commands.py
     may_import:
       - config
       - utilities
+      - lifecycle
   cli:
     paths:
       - src/agentkit/cli.py
       - src/agentkit/__main__.py
     may_import:
       - commands
+      - lifecycle
 
 review:
   require_for:

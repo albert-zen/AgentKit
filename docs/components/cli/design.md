@@ -53,3 +53,5 @@ The CLI should stay thin. It should parse arguments and delegate behavior to com
 `watch` runs a lightweight local reminder loop. It should call the same status/reminder logic as `status`, `remind`, and `check`, then deliver the resulting reminder text while it is running.
 
 The CLI should expose interval and output options when needed, but it should not turn `watch` into an agent runner or job scheduler.
+
+The first implementation supports `--once` for tests and for agents that want a one-shot reminder through the same watch entry point.

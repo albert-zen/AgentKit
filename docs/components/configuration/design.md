@@ -4,6 +4,8 @@
 
 The configuration component loads `agentkit.yml` and turns it into typed Python objects.
 
+AgentKit's own configuration maps lifecycle modules explicitly. The current repo uses a `lifecycle` layer for `lifecycle.py` and `watch.py`, utility mappings for task state and receipt helpers, and guidance component mappings for the reminder sampler implementation.
+
 ## Owned Concepts
 
 - docs configuration

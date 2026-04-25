@@ -77,6 +77,13 @@ The guidance component should provide a shared lifecycle sampler:
 
 `agentkit check`, `agentkit status`, `agentkit remind`, `agentkit watch`, and external adapters should all use this same sampler. `check` can show reminder output for convenience, but it should not become the only place reminder policy lives.
 
+Current implementation modules:
+
+- `task_state.py` reads and writes task state.
+- `receipts.py` reads and writes receipt files.
+- `lifecycle.py` evaluates task state, receipts, fingerprints, missing gates, and reminder text.
+- `watch.py` delivers reminder text in a local loop.
+
 ## Hook Guidance
 
 `install-hooks` should install Git-native hooks for deterministic checks.

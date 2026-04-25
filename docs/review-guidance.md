@@ -172,6 +172,8 @@ If review cannot be performed, the implementing agent must not mark the task com
 
 Reminder adapters should treat missing required review as an open closeout gate. If the task is not blocked with a recorded human question, the adapter may re-activate the agent and ask it to complete review or close the task as blocked. `agentkit check`, `agentkit status`, `agentkit remind`, and an AgentKit-owned local `agentkit watch` process should all derive their guidance from the same task-state sampler. The watcher may provide this reminder delivery while it is running, but it should only deliver the reminder generated from AgentKit state; it should not perform the review or spawn agents itself.
 
+The first watcher implementation is local and simple: `agentkit watch --once` emits one sampled reminder for tests and scripted integrations, while continuous `agentkit watch` repeats the same reminder loop until interrupted.
+
 ## AgentKit Responsibilities
 
 AgentKit should support the review loop by generating guidance:

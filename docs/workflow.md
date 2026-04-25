@@ -388,6 +388,6 @@ Concrete task capabilities such as `start`, checks, status/reminder sampling, re
 
 The MVP does not need a daemon or hosted control plane.
 
-The near-term lifecycle extension should add `agentkit status` and `agentkit remind` so agents and adapters can sample task state directly.
+The lifecycle extension adds `agentkit status` and `agentkit remind` so agents and adapters can sample task state directly.
 
-Post-agent reminders can be implemented later by AgentKit's own lightweight `agentkit watch` adapter, ProjectMan, Symphony, editor integrations, agent runtime hooks, or other local triggers.
+Post-agent reminders can be delivered by AgentKit's own lightweight `agentkit watch` adapter, ProjectMan, Symphony, editor integrations, agent runtime hooks, or other local triggers.
