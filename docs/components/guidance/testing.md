@@ -52,13 +52,15 @@ Reminder tests should eventually verify:
 - open tasks produce reminder text
 - completed tasks do not produce reminders
 - blocked tasks wait for new human input
+- no-task status scopes `agentkit start` guidance to repository-changing work
 - stale receipts produce actionable missing-gate messages
 - `check`, `status`, `remind`, and `watch` derive reminders from the same sampler
 - reminder rendering does not change task state beyond the normal receipt side effects of the command that displays it
 
 Skill tests should verify that the AgentKit plugin skill teaches:
 
-- the normal AgentKit operating loop
+- when to start a lifecycle task and when read-only exploration should avoid it
+- the repository-changing AgentKit operating loop
 - when to ask the human for design
 - command side effects, especially that `start` writes task state
 - common `intent-guidance` change types

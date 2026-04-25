@@ -15,7 +15,7 @@ The workflow has four stages:
 3. Task execution and checks
 4. Exception handling and feedback
 
-Only after a task reaches a valid closed state should the agent end the work.
+Only after a repository-changing AgentKit task reaches a valid closed state should the agent end that work. Read-only exploration, codebase orientation, and question-answering do not require a lifecycle task unless they become long-running or the human explicitly asks AgentKit to track them.
 
 ## Workflow Summary
 
@@ -24,7 +24,7 @@ Repository setup
   -> agentkit init
   -> configure maintainability docs, links, rules, hooks, and skills
 
-Concrete task
+Repository-changing concrete task
   -> human-agent discussion and/or agentkit start
   -> record task intent, todo, focus docs, code scope, and plan
   -> implement against durable intent
@@ -89,7 +89,7 @@ After initialization, `agentkit doctor` should report which maintainability surf
 
 ## 2. Task Start
 
-Task start happens for each concrete unit of work.
+Task start happens for each concrete unit of repository-changing work.
 
 The command is:
 
@@ -100,6 +100,10 @@ agentkit start --task "<task todo>"
 Every task should have a task todo or task statement.
 
 `start` creates or updates the task record that later gates `close`.
+
+Use `start` when the agent will edit code, documentation, configuration, hooks, generated assets, plugin files, or other repository state. Also use it for long-running investigations that the human wants tracked through AgentKit.
+
+Do not require `start` for read-only exploration, codebase orientation, answering questions, or lightweight audits that do not modify repository state. Those activities can read the docs directly and may use `agentkit status` or `agentkit remind` to inspect an existing open task. If a read-only activity turns into implementation or docs changes, the agent should run `agentkit start` before editing.
 
 The task record should capture:
 

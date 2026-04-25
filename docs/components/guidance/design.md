@@ -37,11 +37,12 @@ Generated guidance should distinguish two audiences:
 
 The AgentKit skill should therefore explain how AgentKit helps the current task, when to run commands, when to ask for human design, and how to handle review and closeout. For Codex, that skill should be bundled through the AgentKit plugin rather than treated as a private `.codex` file. It should point to deeper docs instead of restating the full product roadmap.
 
-Root agent guidance is even smaller than the skill. The AgentKit section in `AGENTS.md` should only introduce AgentKit as the maintainability harness and point to the CLI and plugin skill.
+Root agent guidance is even smaller than the skill. The AgentKit section in `AGENTS.md` should introduce AgentKit as the maintainability harness, point to the CLI and plugin skill, and clarify that lifecycle tasks are for repository-changing work. Read-only exploration, codebase orientation, and answering questions without edits should not be forced through `start`, `check`, and `close` unless the work becomes long-running or the human asks for tracking.
 
 The skill should also explain command side effects and common ambiguity points:
 
 - `agentkit start` writes task state
+- lifecycle tasks are required for repository-changing work, not ordinary read-only exploration
 - `agentkit status` and `agentkit remind` are safe status/reminder reads
 - common `intent-guidance` change types
 - docs-only wording tasks usually do not need new product design unless they change meaning or command semantics

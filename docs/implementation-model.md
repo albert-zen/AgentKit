@@ -115,6 +115,8 @@ Side effect:
 
 `start` should reuse the same component and docs analysis as `orient`, but it persists enough state for `close` to evaluate whether the task was responsibly finished.
 
+The lifecycle should be scoped to repository-changing work. Agents should run `start` for code edits, documentation edits, configuration changes, generated files, hook/plugin changes, commits, and long-running investigations the human wants tracked. They should not be required to start a task for read-only codebase orientation, lightweight audits, or answering questions without edits; if that exploration turns into repository changes, the agent should start or resume a task before editing.
+
 The agent may run `start` after a design discussion, or run it earlier and later update the task context once the human-agent discussion clarifies the focus.
 
 The current task state should preserve `focus_notes` and `focus_docs` so another agent can recover the task's human-approved emphasis without reading the original chat.

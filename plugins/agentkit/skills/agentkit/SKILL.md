@@ -20,7 +20,15 @@ AgentKit keeps your work tied to durable repo intent. Use it to:
 
 The skill is an operating guide. For deeper product or architecture intent, read the durable docs that AgentKit returns.
 
-## Normal Operating Loop
+## When To Start A Task
+
+Use the AgentKit task lifecycle for implementation work, documentation edits, hook/plugin changes, generated files, commits, or any task that changes repository state.
+
+Do not start a task for read-only exploration, codebase orientation, answering architecture questions, or lightweight audits with no edits. In those cases, read the relevant docs directly and use `agentkit status` or `agentkit remind` only if you need to inspect an already-open task.
+
+If read-only exploration turns into repository-changing work, start or resume the task before making edits so closeout gates apply to the change.
+
+## Repository-Changing Operating Loop
 
 1. Start or resume the task with `agentkit start`.
 2. Read the durable intent sources in the output.
@@ -33,13 +41,13 @@ The skill is an operating guide. For deeper product or architecture intent, read
 
 ## Start Of Task
 
-Run:
+For repository-changing work, run:
 
 ```text
 agentkit start
 ```
 
-`start` writes repository-local task state under `.agentkit/`. In a read-only audit, do not run `start`; read this skill and use read-only commands such as `agentkit status` or `agentkit remind` instead.
+`start` writes repository-local task state under `.agentkit/`. In a read-only audit, orientation pass, or question-answering task, do not run `start`; read this skill and use read-only commands such as `agentkit status` or `agentkit remind` only when they help inspect existing state.
 
 If you know the component, run:
 

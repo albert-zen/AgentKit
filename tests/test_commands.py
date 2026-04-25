@@ -38,6 +38,7 @@ def test_init_creates_small_agentkit_agents_section(tmp_path: Path) -> None:
     assert "### AgentKit" in agents
     assert "keep agent-led changes tied to durable intent" in agents
     assert "agentkit start --task" in agents
+    assert "read-only exploration" in agents
     assert "Before changing code" not in agents
 
 
@@ -454,6 +455,14 @@ def test_remind_is_quiet_without_open_task(tmp_path: Path) -> None:
     assert "No AgentKit task is open" in output
 
 
+def test_status_without_task_scopes_start_to_repository_changes(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+
+    output = status_task(tmp_path)
+
+    assert "repository-changing work" in output
+
+
 def test_watch_exits_without_open_task(tmp_path: Path) -> None:
     init_repo(tmp_path)
     outputs: list[str] = []
@@ -756,7 +765,9 @@ def test_generate_skill_includes_lifecycle_commands(tmp_path: Path) -> None:
     generate_skill(tmp_path)
 
     skill = (tmp_path / "plugins" / "agentkit" / "skills" / "agentkit" / "SKILL.md").read_text(encoding="utf-8")
-    assert "Normal Operating Loop" in skill
+    assert "When To Start A Task" in skill
+    assert "Repository-Changing Operating Loop" in skill
+    assert "read-only exploration" in skill
     assert "ask the human" in skill
     assert "start` writes repository-local task state" in skill
     assert "architecture`, `data_model`, `public_api`" in skill

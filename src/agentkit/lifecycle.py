@@ -41,7 +41,7 @@ def sample_lifecycle(repo: Path, task_id: str | None = None) -> LifecycleSample:
             diff_fingerprint=current_fingerprint,
             open_changes=current_changes,
             missing_gates=(),
-            next_actions=("Run `agentkit start --task \"...\"` before working on a new task.",),
+            next_actions=("Run `agentkit start --task \"...\"` before repository-changing work that needs lifecycle tracking.",),
         )
 
     status = str(state.get("status") or "open")
@@ -60,7 +60,7 @@ def sample_lifecycle(repo: Path, task_id: str | None = None) -> LifecycleSample:
             open_changes=current_changes,
             missing_gates=(f"task state is stale because the diff changed after it was {closed_word}",),
             next_actions=(
-                "Run `agentkit start --task \"...\"` for the new work, or restore the previous diff before relying on the closed state.",
+                "Run `agentkit start --task \"...\"` for the new repository-changing work, or restore the previous diff before relying on the closed state.",
                 "If the new change cannot continue without human input, close as blocked with a recorded question.",
             ),
             focus_notes=focus_notes,
