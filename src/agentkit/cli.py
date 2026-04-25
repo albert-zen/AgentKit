@@ -11,6 +11,7 @@ from agentkit.commands import (
     docs_impact,
     doctor,
     generate_skill,
+    install_codex_watchdog,
     init_repo,
     install_hooks,
     intent_guidance,
@@ -71,7 +72,15 @@ def main(argv: list[str] | None = None) -> None:
     hooks_parser = subparsers.add_parser("install-hooks")
     hooks_parser.add_argument("--force", action="store_true")
 
-    subparsers.add_parser("codex-stop-hook")
+    codex_watchdog_parser = subparsers.add_parser("install-codex-watchdog")
+    codex_watchdog_scope = codex_watchdog_parser.add_mutually_exclusive_group()
+    codex_watchdog_scope.add_argument("--repo-local", action="store_true", help="Install into <repo>/.codex")
+    codex_watchdog_scope.add_argument("--user-local", action="store_true", help="Install into CODEX_HOME or ~/.codex")
+    codex_watchdog_parser.add_argument("--force", action="store_true")
+    codex_watchdog_parser.add_argument("--log-path", default=".agentkit/codex-stop-hook.log")
+
+    codex_stop_parser = subparsers.add_parser("codex-stop-hook")
+    codex_stop_parser.add_argument("--log")
 
     watch_parser = subparsers.add_parser("watch")
     watch_parser.add_argument("--interval", type=float, default=30.0)
@@ -134,8 +143,11 @@ def main(argv: list[str] | None = None) -> None:
             raise SystemExit(code)
         elif args.command == "install-hooks":
             print(install_hooks(repo, force=args.force))
+        elif args.command == "install-codex-watchdog":
+            scope = "user" if args.user_local else "repo"
+            print(install_codex_watchdog(repo, scope=scope, force=args.force, log_path=args.log_path))
         elif args.command == "codex-stop-hook":
-            code, output = codex_stop_hook(repo, sys.stdin.read())
+            code, output = codex_stop_hook(repo, sys.stdin.read(), log_path=args.log)
             if output:
                 print(output)
             raise SystemExit(code)

@@ -76,6 +76,8 @@ Watcher tests should eventually verify:
 - watcher output is stateful and does not repeat closed or blocked tasks
 - watcher configuration cannot turn AgentKit into a job runner
 - local notification failures are reported without corrupting task state
+- Codex watchdog installation writes hook config through the Codex config layer instead of relying only on plugin-local hook packaging
+- Codex Stop-hook diagnostics make it clear whether Codex invoked the hook at all
 
 Codex plugin tests should verify:
 

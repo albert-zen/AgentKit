@@ -335,6 +335,8 @@ AgentKit owns reminder truth, and it may also ship a lightweight local watcher f
 
 The same state sampler should power `check`, `status`, `remind`, `watch`, and external integrations. `check` may include lifecycle reminders for convenience, but the reminder policy should live below the command layer so every entry point sees the same missing gates and fallback options.
 
+For Codex, the reliable wakeup path is the hooks config layer, not just plugin packaging. AgentKit should provide `agentkit install-codex-watchdog` to write or merge `.codex/hooks.json`, enable `features.codex_hooks`, and point the Stop event at `agentkit codex-stop-hook`. The Codex plugin remains the skill distribution surface; the hook config is the runtime continuation surface.
+
 ## Intent Injection Channels
 
 AgentKit uses several channels to inject human intent into agent work.

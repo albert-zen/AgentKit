@@ -8,6 +8,7 @@ from agentkit.commands import (
     docs_impact,
     doctor,
     generate_skill,
+    install_codex_watchdog,
     init_repo,
     install_hooks,
     lint_architecture,
@@ -88,6 +89,16 @@ def test_init_creates_codex_plugin_skill_surface(tmp_path: Path) -> None:
     assert marketplace["plugins"][0]["source"]["path"] == "./plugins/agentkit"
 
 
+def test_checked_in_agentkit_plugin_declares_icon_assets() -> None:
+    repo = Path(__file__).resolve().parents[1]
+    plugin = json.loads((repo / "plugins" / "agentkit" / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+
+    for field in ["composerIcon", "logo"]:
+        asset = repo / "plugins" / "agentkit" / plugin["interface"][field]
+        assert plugin["interface"][field] == "./assets/agentkit-icon.png"
+        assert asset.exists()
+
+
 def test_init_appends_agentkit_to_existing_codex_marketplace(tmp_path: Path) -> None:
     (tmp_path / ".agents" / "plugins").mkdir(parents=True)
     (tmp_path / ".agents" / "plugins" / "marketplace.json").write_text(
@@ -164,6 +175,20 @@ def test_doctor_reports_ready_initialized_repo(tmp_path: Path) -> None:
     assert "ready" in output
     assert "AGENTS.md contains AgentKit entry guidance" in output
     assert "canonical AgentKit skill source exists" in output
+    assert "Codex watchdog hook missing" in output
+
+
+def test_doctor_reports_installed_codex_watchdog(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "example.py").write_text("VALUE = 1\n", encoding="utf-8")
+    generate_skill(tmp_path)
+    install_codex_watchdog(tmp_path)
+
+    code, output = doctor(tmp_path)
+
+    assert code == 0
+    assert "Codex watchdog hook is installed" in output
 
 
 def test_doctor_respects_configured_doc_paths(tmp_path: Path) -> None:
@@ -445,13 +470,16 @@ def test_codex_stop_hook_blocks_when_task_needs_closeout(tmp_path: Path) -> None
     start_task(tmp_path, component_names=["core"])
     payload = json.dumps({"cwd": str(tmp_path), "hook_event_name": "Stop"})
 
-    code, output = codex_stop_hook(tmp_path, payload)
+    code, output = codex_stop_hook(tmp_path, payload, log_path=".agentkit/stop-hook.log")
 
     assert code == 0
     result = json.loads(output)
     assert result["decision"] == "block"
     assert "AgentKit has not reached a valid closeout state" in result["reason"]
     assert "missing check receipt" in result["reason"]
+    log = (tmp_path / ".agentkit" / "stop-hook.log").read_text(encoding="utf-8")
+    assert '"event": "Stop"' in log
+    assert '"state": "needs_work"' in log
 
 
 def test_codex_stop_hook_is_quiet_without_open_task(tmp_path: Path) -> None:
@@ -461,6 +489,118 @@ def test_codex_stop_hook_is_quiet_without_open_task(tmp_path: Path) -> None:
 
     assert code == 0
     assert output == ""
+
+
+def test_install_codex_watchdog_writes_repo_hooks_and_feature(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+
+    output = install_codex_watchdog(tmp_path)
+
+    hooks = json.loads((tmp_path / ".codex" / "hooks.json").read_text(encoding="utf-8"))
+    config = (tmp_path / ".codex" / "config.toml").read_text(encoding="utf-8")
+    command = hooks["hooks"]["Stop"][0]["hooks"][0]["command"]
+    assert command == 'agentkit codex-stop-hook --log ".agentkit/codex-stop-hook.log"'
+    assert "codex_hooks = true" in config
+    assert "Codex Watchdog Installed" in output
+
+
+def test_install_codex_watchdog_merges_existing_hooks_and_features(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    (tmp_path / ".codex").mkdir(exist_ok=True)
+    (tmp_path / ".codex" / "hooks.json").write_text(
+        json.dumps({"hooks": {"Stop": [{"hooks": [{"type": "command", "command": "other-tool"}]}]}}),
+        encoding="utf-8",
+    )
+    (tmp_path / ".codex" / "config.toml").write_text("[features]\nmemories = true\n", encoding="utf-8")
+
+    install_codex_watchdog(tmp_path)
+
+    hooks = json.loads((tmp_path / ".codex" / "hooks.json").read_text(encoding="utf-8"))
+    commands = [item["command"] for group in hooks["hooks"]["Stop"] for item in group["hooks"]]
+    config = (tmp_path / ".codex" / "config.toml").read_text(encoding="utf-8")
+    assert "other-tool" in commands
+    assert any(command.startswith("agentkit codex-stop-hook") for command in commands)
+    assert "[features]" in config
+    assert "memories = true" in config
+    assert "codex_hooks = true" in config
+
+
+def test_install_codex_watchdog_enables_dotted_feature_config(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    (tmp_path / ".codex").mkdir(exist_ok=True)
+    (tmp_path / ".codex" / "config.toml").write_text("features.memories = true\nfeatures.codex_hooks = false\n", encoding="utf-8")
+
+    install_codex_watchdog(tmp_path)
+
+    config = (tmp_path / ".codex" / "config.toml").read_text(encoding="utf-8")
+    assert "features.memories = true" in config
+    assert "features.codex_hooks = true" in config
+    assert "[features]" not in config
+
+
+def test_install_codex_watchdog_enables_inline_feature_config(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    (tmp_path / ".codex").mkdir(exist_ok=True)
+    (tmp_path / ".codex" / "config.toml").write_text("features = { memories = true }\n", encoding="utf-8")
+
+    install_codex_watchdog(tmp_path)
+
+    config = (tmp_path / ".codex" / "config.toml").read_text(encoding="utf-8")
+    assert "features = { memories = true, codex_hooks = true }" in config
+    assert "[features]" not in config
+
+
+def test_install_codex_watchdog_ignores_unrelated_codex_hooks_key(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    (tmp_path / ".codex").mkdir(exist_ok=True)
+    (tmp_path / ".codex" / "config.toml").write_text("[mcp_servers.demo]\ncodex_hooks = true\n", encoding="utf-8")
+
+    install_codex_watchdog(tmp_path)
+
+    config = (tmp_path / ".codex" / "config.toml").read_text(encoding="utf-8")
+    assert "[mcp_servers.demo]" in config
+    assert "\n[features]\ncodex_hooks = true\n" in config
+
+
+def test_install_codex_watchdog_upgrades_existing_unlogged_hook(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    (tmp_path / ".codex").mkdir(exist_ok=True)
+    (tmp_path / ".codex" / "hooks.json").write_text(
+        json.dumps({"hooks": {"Stop": [{"hooks": [{"type": "command", "command": "agentkit codex-stop-hook"}]}]}}),
+        encoding="utf-8",
+    )
+
+    install_codex_watchdog(tmp_path)
+
+    hooks = json.loads((tmp_path / ".codex" / "hooks.json").read_text(encoding="utf-8"))
+    command = hooks["hooks"]["Stop"][0]["hooks"][0]["command"]
+    assert command == 'agentkit codex-stop-hook --log ".agentkit/codex-stop-hook.log"'
+
+
+def test_doctor_tolerates_malformed_optional_codex_hooks(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "example.py").write_text("VALUE = 1\n", encoding="utf-8")
+    generate_skill(tmp_path)
+    (tmp_path / ".codex").mkdir(exist_ok=True)
+    (tmp_path / ".codex" / "hooks.json").write_text("{not json", encoding="utf-8")
+
+    code, output = doctor(tmp_path)
+
+    assert code == 0
+    assert "Codex watchdog hook missing" in output
+
+
+def test_install_codex_watchdog_can_target_user_codex_home(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    codex_home = tmp_path / "codex-home"
+    repo.mkdir()
+    init_repo(repo)
+
+    install_codex_watchdog(repo, scope="user", codex_home=codex_home)
+
+    assert (codex_home / "hooks.json").exists()
+    assert "codex_hooks = true" in (codex_home / "config.toml").read_text(encoding="utf-8")
 
 
 def test_blocked_task_reminds_when_diff_changes(tmp_path: Path) -> None:
@@ -622,6 +762,7 @@ def test_generate_skill_includes_lifecycle_commands(tmp_path: Path) -> None:
     assert "agentkit start" in skill
     assert "agentkit status" in skill
     assert "agentkit remind" in skill
+    assert "agentkit install-codex-watchdog --repo-local" in skill
     assert "review loop was completed" in skill
     assert "agentkit close" in skill
 

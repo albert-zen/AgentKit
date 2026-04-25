@@ -413,4 +413,4 @@ The MVP does not need a daemon or hosted control plane.
 
 The lifecycle extension adds `agentkit status` and `agentkit remind` so agents and adapters can sample task state directly.
 
-Post-agent reminders can be delivered by AgentKit's own lightweight `agentkit watch` adapter, ProjectMan, Symphony, editor integrations, agent runtime hooks, or other local triggers. For Codex, the natural distribution surface is the AgentKit plugin: the plugin bundles the skill and can declare the Stop-hook adapter that calls `agentkit codex-stop-hook`.
+Post-agent reminders can be delivered by AgentKit's own lightweight `agentkit watch` adapter, ProjectMan, Symphony, editor integrations, agent runtime hooks, or other local triggers. For Codex, the plugin bundles the skill, while reliable Stop-hook delivery is installed explicitly with `agentkit install-codex-watchdog`. That installer writes the Codex hook config that calls `agentkit codex-stop-hook` and enables the `codex_hooks` feature in the relevant config layer.

@@ -41,4 +41,6 @@ Watch command coverage should verify:
 - `watch --once` emits one reminder and exits
 - `watch` stops reminding for completed or traceably blocked tasks
 - `watch` does not spawn agents or manage jobs
+- `install-codex-watchdog` writes or merges Codex hook config and enables `codex_hooks`
 - `codex-stop-hook` returns a Codex continuation response only while lifecycle gates are missing
+- `codex-stop-hook --log` writes a diagnostic receipt so failed end-to-end tests can distinguish "hook not called" from "hook called but ignored"

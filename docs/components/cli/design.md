@@ -30,6 +30,7 @@ The CLI should stay thin. It should parse arguments and delegate behavior to com
 - `agentkit review-guidance`
 - `agentkit close`
 - `agentkit install-hooks`
+- `agentkit install-codex-watchdog`
 - `agentkit watch`
 - `agentkit skill`
 - `agentkit codex-stop-hook`
@@ -60,7 +61,9 @@ The CLI should stay thin. It should parse arguments and delegate behavior to com
 
 `install-hooks` installs Git-triggered deterministic hooks. It should not create a separate manual pre-commit workflow for agents.
 
-`codex-stop-hook` is the Codex Stop-hook adapter used by the AgentKit plugin. It reads Codex hook JSON from stdin, samples AgentKit lifecycle state, and returns a Codex continuation response only when the task still needs closeout work.
+`install-codex-watchdog` installs Codex lifecycle hook configuration through Codex's normal hook discovery layer. Repo-local installation writes `<repo>/.codex/hooks.json` and `<repo>/.codex/config.toml`; user-local installation writes to `CODEX_HOME` or `~/.codex`. The installer should merge with existing hook files instead of replacing unrelated hooks.
+
+`codex-stop-hook` is the Codex Stop-hook adapter. It reads Codex hook JSON from stdin, samples AgentKit lifecycle state, optionally writes a diagnostic log, and returns a Codex continuation response only when the task still needs closeout work.
 
 ## Watch Command
 

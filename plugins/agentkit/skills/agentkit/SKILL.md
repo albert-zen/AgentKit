@@ -101,6 +101,14 @@ For a local reminder loop, use:
 agentkit watch
 ```
 
+For Codex Stop-hook reminders, install explicit hook wiring:
+
+```text
+agentkit install-codex-watchdog --repo-local
+```
+
+If a Stop hook does not appear to run, check `.agentkit/codex-stop-hook.log`. No log usually means Codex did not invoke the hook.
+
 ## Close Task
 
 Before ending the task, run:

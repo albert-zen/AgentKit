@@ -84,6 +84,8 @@ Reminder guidance should distinguish state from delivery. AgentKit owns the open
 
 `agentkit watch` should be treated as a first-party reminder adapter, not a new orchestration layer. It may poll local task state, emit reminder text, and call configured local notification commands. It should not spawn coding agents, manage queues, or perform semantic review.
 
+For Codex, reminder delivery that continues a stopped turn should use explicit Codex hook configuration. The AgentKit plugin teaches the workflow, but `agentkit install-codex-watchdog` installs the Stop hook in `.codex/hooks.json` and enables `features.codex_hooks` in `.codex/config.toml`. This keeps skill distribution separate from runtime continuation wiring.
+
 The guidance component should provide a shared lifecycle sampler:
 
 - read task state

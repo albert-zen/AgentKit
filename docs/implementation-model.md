@@ -379,6 +379,22 @@ Non-responsibilities:
 
 `watch` should keep reminding while a task is open and required gates are missing. Once `close` records `completed` or a traceable `blocked` state, the watcher should stop reminding for that task until new human input or changed task state makes it active again.
 
+## `agentkit install-codex-watchdog`
+
+Install Codex lifecycle hook wiring for AgentKit closeout reminders.
+
+Outputs:
+
+- installed scope
+- written or updated files
+- next verification instruction
+
+Repo-local installation should write `<repo>/.codex/hooks.json` and `<repo>/.codex/config.toml`. User-local installation should write to `CODEX_HOME` when set, otherwise `~/.codex`. The installer should preserve unrelated hooks and config settings, append or update only the AgentKit Stop hook, and ensure `features.codex_hooks = true`.
+
+The Stop hook command should call `agentkit codex-stop-hook --log ".agentkit/codex-stop-hook.log"` by default. The log is a diagnostic receipt: if an end-to-end Codex run stops without continuation and no log appears, Codex never invoked the hook.
+
+The first successful Codex smoke test used a clean temporary repository with a committed AgentKit baseline. Codex initially answered the user's prompt, the Stop hook logged `needs_work`, Codex continued the turn with the AgentKit reminder, the agent ran `agentkit check`, then `agentkit close`, and a later Stop hook logged `completed`. A failed earlier smoke test wrote Codex JSONL output inside the repo, which changed the diff every continuation and made blocked state stale; future smoke tests should keep runner output outside the repo or ignore it.
+
 ## `agentkit install-hooks`
 
 Install repository-local hooks.

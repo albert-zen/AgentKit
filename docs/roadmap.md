@@ -289,6 +289,8 @@ The key design boundary:
 
 AgentKit should be allowed to ship a lightweight local watcher. That watcher should stay small: it reads AgentKit state, emits reminders, and optionally calls configured local notification mechanisms. It should not become a general job orchestrator or agent runner.
 
+For Codex, the next reliable adapter is an explicit hooks-config installer. `agentkit install-codex-watchdog` should create or merge `.codex/hooks.json`, ensure `features.codex_hooks = true`, and add diagnostic logging so failed smoke tests can tell whether Codex skipped the hook or ignored its continuation output.
+
 ## Phase 2: ProjectMan Dogfood Integration
 
 Goal: Use AgentKit while adding Symphony-style agent spawning and board features to ProjectMan.

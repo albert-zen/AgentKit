@@ -14,6 +14,8 @@
     "defaultPrompt": [
       "Use AgentKit to start this task and follow the repository closeout workflow.",
       "Use AgentKit to check whether this task is ready for review and closeout."
-    ]
+    ],
+    "composerIcon": "./assets/agentkit-icon.png",
+    "logo": "./assets/agentkit-icon.png"
   }
 }
