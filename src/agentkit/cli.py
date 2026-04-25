@@ -8,6 +8,7 @@ from agentkit.commands import (
     check,
     close_task,
     docs_impact,
+    doctor,
     generate_skill,
     init_repo,
     install_hooks,
@@ -53,6 +54,7 @@ def main(argv: list[str] | None = None) -> None:
 
     subparsers.add_parser("lint-architecture")
     subparsers.add_parser("check")
+    subparsers.add_parser("doctor")
     status_parser = subparsers.add_parser("status")
     status_parser.add_argument("--task-id")
     remind_parser = subparsers.add_parser("remind")
@@ -107,6 +109,10 @@ def main(argv: list[str] | None = None) -> None:
             raise SystemExit(code)
         elif args.command == "check":
             code, output = check(repo)
+            print(output)
+            raise SystemExit(code)
+        elif args.command == "doctor":
+            code, output = doctor(repo)
             print(output)
             raise SystemExit(code)
         elif args.command == "status":

@@ -224,6 +224,8 @@ Vision issues:
 
 - `init` should become a repo readiness audit, not only a scaffold command.
 - `init` should report whether docs, component mappings, architecture rules, hooks, and skills are present.
+- `doctor` should provide that readiness audit without mutating files.
+- `init` should keep root agent guidance small and point to the generated skill for the full operating guide.
 - `start` should support explicit task updates, such as focus notes, focus docs, task ids, and refined plans.
 - `close` should explain missing gates in a way agents can act on immediately.
 - task state should distinguish current focus, original task todo, human-approved constraints, receipts, and blocked handoff notes.

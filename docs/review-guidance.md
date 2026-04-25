@@ -240,3 +240,5 @@ The skill should include:
 - how to handle reviewer findings
 
 This lets AgentKit inject review behavior into the implementing agent without needing to own every runtime or orchestration mechanism.
+
+Root `AGENTS.md` should only point agents toward AgentKit entry commands and the generated skill. Detailed review behavior belongs in the generated skill and this review guidance document, not in the root agent instruction file.

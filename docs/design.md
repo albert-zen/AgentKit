@@ -158,6 +158,8 @@ If an intention only exists in a chat thread or in someone's head, it will event
 
 The root agent instruction file should be short. It should tell agents where to look, how to decide what to read, and what rules are mandatory. Detailed knowledge should live in structured docs.
 
+`agentkit init` should keep this surface small. It may create or append a low-level AgentKit section that explains the repository uses AgentKit for maintainable agent-led changes and points agents to the CLI entry points and generated skill. It should not put the full AgentKit workflow or product philosophy into `AGENTS.md`.
+
 ### Documentation Should Become Executable When It Matters
 
 Some intentions can stay as prose. Important intentions should eventually become checks:
@@ -609,6 +611,8 @@ The value of `init` is not scaffolding for its own sake. It creates the durable 
 - which local commands agents should run
 - where an AgentKit skill should be generated
 
+If `AGENTS.md` or `agents.md` already exists, `init` should add only a small low-level AgentKit entry section instead of overwriting the file or inserting a large workflow manual.
+
 ### `agentkit start`
 
 Start or resume an AgentKit task.
@@ -771,6 +775,8 @@ AgentKit may optionally emit a durable context summary for external systems, but
 ### `agentkit doctor`
 
 Explain repository readiness for agent-first development.
+
+`doctor` should audit whether the repository has the AgentKit entry guidance, config, docs, valid mappings, generated skill, and optional hook setup. It reports missing readiness items and optional improvements without changing files.
 
 ### `agentkit skill`
 

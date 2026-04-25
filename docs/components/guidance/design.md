@@ -37,6 +37,8 @@ Generated guidance should distinguish two audiences:
 
 The generated skill should therefore explain how AgentKit helps the current task, when to run commands, when to ask for human design, and how to handle review and closeout. It should point to deeper docs instead of restating the full product roadmap.
 
+Root agent guidance is even smaller than the skill. The AgentKit section in `AGENTS.md` should only introduce AgentKit as the maintainability harness and point to the CLI and generated skill.
+
 The skill should also explain command side effects and common ambiguity points:
 
 - `agentkit start` writes task state

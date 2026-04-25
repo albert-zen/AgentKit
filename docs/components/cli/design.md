@@ -18,6 +18,7 @@ The CLI should stay thin. It should parse arguments and delegate behavior to com
 ## Public Commands
 
 - `agentkit init`
+- `agentkit doctor`
 - `agentkit start`
 - `agentkit orient`
 - `agentkit intent-guidance`
@@ -47,6 +48,12 @@ The CLI should stay thin. It should parse arguments and delegate behavior to com
 `check` may include lifecycle reminders in its output, but the CLI should still route status/reminder computation through shared guidance logic instead of implementing reminder policy itself.
 
 `close --review-complete` is an acknowledgement by the implementing agent that the required review loop was completed for the current diff and meaningful findings were handled. It is not a command for storing reviewer transcripts.
+
+## Init And Doctor Commands
+
+`init` creates the default AgentKit surfaces and ensures `AGENTS.md` or `agents.md` contains a small low-level AgentKit entry section. It should not overwrite an existing agent instruction file just to add AgentKit guidance.
+
+`doctor` audits readiness without changing files. It should report required missing surfaces separately from optional improvements.
 
 ## Hook Commands
 

@@ -59,6 +59,8 @@ Outputs:
 - starter architecture rules
 - optional AgentKit skill
 
+When writing `AGENTS.md`, `init` should create or append a concise low-level AgentKit section. The section should introduce AgentKit as the repo-local maintainability harness and point to the command entry points plus generated skill. It should not duplicate the generated skill.
+
 `init` should also guide the agent to configure the repository's maintainability system:
 
 - docs root and durable intent locations
@@ -68,6 +70,19 @@ Outputs:
 - deterministic hooks through `agentkit install-hooks`
 
 The output should make clear that the initialized repo may still need human-agent configuration work before it is truly maintainable.
+
+## `agentkit doctor`
+
+Audit repository readiness without changing files.
+
+Outputs:
+
+- readiness status
+- ready checks
+- recommended actions for missing required surfaces
+- optional improvements for project-policy surfaces such as hooks or architecture layers
+
+The first implementation should check for AgentKit entry guidance in `AGENTS.md` or `agents.md`, `agentkit.yml`, valid manifest references, component mappings, docs, generated skill, and optional Git hooks.
 
 ## `agentkit start`
 

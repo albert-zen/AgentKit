@@ -12,21 +12,15 @@ from agentkit.render import bullet, section
 from agentkit.task_state import DEFAULT_TASK_ID, load_task_state, task_path, write_task_state
 
 
-DEFAULT_AGENT_MD = """# AGENTS.md
+AGENTKIT_AGENT_SECTION_MARKER = "<!-- agentkit:agents-section -->"
 
-This repository uses AgentKit.
+AGENTKIT_AGENT_SECTION = f"""### AgentKit
 
-Before changing code:
-- Run `agentkit start` with the relevant component, task, or changed paths.
-- Read the durable intent sources and docs AgentKit recommends.
-- Ask the human for design when AgentKit reports a design gap for a product, architecture, API, data model, workflow, or state-machine change.
+{AGENTKIT_AGENT_SECTION_MARKER}
+This repository uses AgentKit to keep agent-led changes tied to durable intent, checks, review, and closeout. Start with `agentkit start --task "..."`, use `agentkit check` plus `agentkit status` or `agentkit remind` while working, and finish with `agentkit close`. For the full operating guide, read the generated AgentKit skill.
+"""
 
-After changing code:
-- Run relevant tests.
-- Run `agentkit check`.
-- Update docs when behavior, architecture, public contracts, workflows, data models, or testing strategy changed.
-- Run `agentkit review-guidance` for non-trivial work.
-- Run `agentkit close --review-complete` before ending a reviewed task. If blocked, record the human question with `agentkit close --blocked-question "..."`.
+DEFAULT_AGENT_MD = f"""{AGENTKIT_AGENT_SECTION}
 """
 
 
@@ -91,7 +85,7 @@ TASK_STOPWORDS = {
 
 def init_repo(repo: Path, force: bool = False) -> str:
     created: list[str] = []
-    _write_if_missing(repo / "AGENTS.md", DEFAULT_AGENT_MD, created, force)
+    _ensure_agentkit_agents_section(_agents_path(repo), created, force)
     _write_if_missing(repo / "agentkit.yml", DEFAULT_AGENTKIT_YML, created, force)
     for directory in [
         repo / "docs",
@@ -106,6 +100,78 @@ def init_repo(repo: Path, force: bool = False) -> str:
     _write_if_missing(repo / "docs" / "workflow.md", "# Workflow\n\nStatus: Draft\n", created, force)
     _write_if_missing(repo / "docs" / "architecture" / "dependency-rules.md", "# Dependency Rules\n", created, force)
     return section("AgentKit Init", bullet(created or ["No files changed"]))
+
+
+def doctor(repo: Path) -> tuple[int, str]:
+    findings: list[str] = []
+    ok: list[str] = []
+    recommendations: list[str] = []
+
+    agents_path = _agents_path(repo)
+    if agents_path.exists():
+        agents_text = agents_path.read_text(encoding="utf-8")
+        if AGENTKIT_AGENT_SECTION_MARKER in agents_text:
+            ok.append("AGENTS.md contains AgentKit entry guidance")
+        else:
+            findings.append("AGENTS.md is missing AgentKit entry guidance; run `agentkit init`")
+    else:
+        findings.append("Missing AGENTS.md; run `agentkit init`")
+
+    config_path = repo / "agentkit.yml"
+    configured_doc_paths: list[str] = []
+    if config_path.exists():
+        ok.append("agentkit.yml exists")
+        try:
+            config = load_config(repo)
+            configured_doc_paths = [path for path in [config.docs.design, config.docs.workflow] if path]
+            manifest_errors = validate_manifest(repo, config)
+            if manifest_errors:
+                findings.extend(manifest_errors)
+            else:
+                ok.append("manifest references are valid")
+            if config.components:
+                ok.append(f"components configured: {len(config.components)}")
+            else:
+                findings.append("No components configured in agentkit.yml")
+            if config.layers:
+                ok.append(f"architecture layers configured: {len(config.layers)}")
+            else:
+                recommendations.append("No architecture layers configured in agentkit.yml; add them when dependency direction matters")
+            skill_path = repo / config.skills.output
+            if skill_path.exists():
+                ok.append("generated AgentKit skill exists")
+            else:
+                findings.append("Generated AgentKit skill is missing; run `agentkit skill`")
+        except Exception as exc:
+            findings.append(f"Unable to load agentkit.yml: {exc}")
+    else:
+        findings.append("Missing agentkit.yml; run `agentkit init`")
+
+    for doc in configured_doc_paths:
+        if (repo / doc).exists():
+            ok.append(f"{doc} exists")
+        else:
+            findings.append(f"Missing {doc}; run `agentkit init` or configure docs paths")
+
+    if is_git_repo(repo):
+        hook_path = git_path(repo, "hooks/pre-commit")
+        if hook_path.exists():
+            ok.append("pre-commit hook exists")
+        else:
+            recommendations.append("pre-commit hook missing; run `agentkit install-hooks` if local policy wants Git checks")
+
+    code = 1 if findings else 0
+    return (
+        code,
+        "\n\n".join(
+            [
+                section("AgentKit Doctor", ["ready" if code == 0 else "needs_attention"]),
+                section("Ready Checks", bullet(ok)),
+                section("Recommended Actions", bullet(findings)),
+                section("Optional Improvements", bullet(recommendations)),
+            ]
+        ),
+    )
 
 
 def start_task(
@@ -681,6 +747,28 @@ def _write_if_missing(path: Path, content: str, created: list[str], force: bool)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
     created.append(path.name if path.parent == path.parent.parent else path.as_posix())
+
+
+def _ensure_agentkit_agents_section(path: Path, created: list[str], force: bool) -> None:
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(DEFAULT_AGENT_MD, encoding="utf-8")
+        created.append(path.name)
+        return
+    text = path.read_text(encoding="utf-8")
+    if AGENTKIT_AGENT_SECTION_MARKER in text:
+        return
+    separator = "\n\n" if text.strip() else ""
+    path.write_text(f"{text.rstrip()}{separator}{AGENTKIT_AGENT_SECTION}\n", encoding="utf-8")
+    created.append(f"{path.name} AgentKit section")
+
+
+def _agents_path(repo: Path) -> Path:
+    for name in ["AGENTS.md", "agents.md"]:
+        candidate = repo / name
+        if candidate.exists():
+            return candidate
+    return repo / "AGENTS.md"
 
 
 def _component_label(component: ComponentConfig) -> str:

@@ -23,6 +23,13 @@ Lifecycle command coverage should verify:
 - `close` requires a check receipt
 - `close --review-complete` allows completion after required review
 
+Init and doctor coverage should verify:
+
+- `init` creates a small AgentKit section when no agent instruction file exists
+- `init` appends the small section to an existing `AGENTS.md` or `agents.md`
+- `doctor` reports missing readiness items
+- `doctor` reports an initialized repo with valid mappings as ready
+
 Hook command coverage should verify:
 
 - `install-hooks` writes a Git `pre-commit` hook

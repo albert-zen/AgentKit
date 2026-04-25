@@ -67,6 +67,8 @@ Recommended initialized surfaces:
 - `.codex/skills/agentkit/SKILL.md`
 - optional Git hooks through `agentkit install-hooks`
 
+The `AGENTS.md` entry should stay intentionally small: a low-level AgentKit section that says the repo uses AgentKit to maintain agent-led changes and points to `agentkit start`, `agentkit check`, `agentkit status` or `agentkit remind`, `agentkit close`, and the generated skill.
+
 The initialized repo should answer:
 
 - Where does human intent live?
@@ -80,6 +82,8 @@ The initialized repo should answer:
 The `init` command should not pretend to fully configure the repo by itself. Its job is to guide the agent to complete the maintainability setup.
 
 If the repository already has a documentation system, AgentKit should adapt to it through configuration instead of forcing a full replacement.
+
+After initialization, `agentkit doctor` should report which maintainability surfaces are present and which still need attention.
 
 ## 2. Task Start
 

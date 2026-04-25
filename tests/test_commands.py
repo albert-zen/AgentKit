@@ -4,6 +4,7 @@ from agentkit.commands import (
     close_task,
     check,
     docs_impact,
+    doctor,
     generate_skill,
     init_repo,
     install_hooks,
@@ -25,6 +26,104 @@ def test_init_and_orient(tmp_path: Path) -> None:
 
     assert "Affected Components" in output
     assert "docs/design.md" in output
+
+
+def test_init_creates_small_agentkit_agents_section(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+
+    agents = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+    assert "### AgentKit" in agents
+    assert "keep agent-led changes tied to durable intent" in agents
+    assert "agentkit start --task" in agents
+    assert "Before changing code" not in agents
+
+
+def test_init_appends_agentkit_section_to_existing_agents(tmp_path: Path) -> None:
+    (tmp_path / "AGENTS.md").write_text("# Existing\n\nKeep local conventions.\n", encoding="utf-8")
+
+    init_repo(tmp_path)
+
+    agents = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+    assert "# Existing" in agents
+    assert "### AgentKit" in agents
+    assert agents.index("# Existing") < agents.index("### AgentKit")
+
+
+def test_init_force_preserves_existing_agents_file(tmp_path: Path) -> None:
+    (tmp_path / "AGENTS.md").write_text("# Existing\n\nKeep local conventions.\n", encoding="utf-8")
+
+    init_repo(tmp_path, force=True)
+
+    agents = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+    assert "# Existing" in agents
+    assert "Keep local conventions." in agents
+    assert "### AgentKit" in agents
+
+
+def test_init_updates_existing_lowercase_agents_file(tmp_path: Path) -> None:
+    (tmp_path / "agents.md").write_text("Existing notes.\n", encoding="utf-8")
+
+    init_repo(tmp_path)
+
+    agents = (tmp_path / "agents.md").read_text(encoding="utf-8")
+    assert "Existing notes." in agents
+    assert "### AgentKit" in agents
+
+
+def test_doctor_reports_missing_readiness_items(tmp_path: Path) -> None:
+    code, output = doctor(tmp_path)
+
+    assert code == 1
+    assert "needs_attention" in output
+    assert "Missing AGENTS.md" in output
+    assert "Missing agentkit.yml" in output
+
+
+def test_doctor_reports_ready_initialized_repo(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "example.py").write_text("VALUE = 1\n", encoding="utf-8")
+    generate_skill(tmp_path)
+
+    code, output = doctor(tmp_path)
+
+    assert code == 0
+    assert "ready" in output
+    assert "AGENTS.md contains AgentKit entry guidance" in output
+
+
+def test_doctor_respects_configured_doc_paths(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "example.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (tmp_path / "docs" / "product.md").write_text("# Product\n", encoding="utf-8")
+    (tmp_path / "docs" / "process.md").write_text("# Process\n", encoding="utf-8")
+    (tmp_path / "agentkit.yml").write_text(
+        """
+version: 1
+docs:
+  root: docs
+  design: docs/product.md
+  workflow: docs/process.md
+components:
+  core:
+    code:
+      - src/**
+    docs:
+      - docs/product.md
+layers: {}
+skills:
+  output: .codex/skills/agentkit/SKILL.md
+""",
+        encoding="utf-8",
+    )
+    generate_skill(tmp_path)
+
+    code, output = doctor(tmp_path)
+
+    assert code == 0
+    assert "docs/product.md exists" in output
+    assert "docs/process.md exists" in output
 
 
 def test_start_task_writes_state_with_durable_sources(tmp_path: Path) -> None:

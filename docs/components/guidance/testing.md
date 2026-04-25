@@ -68,6 +68,8 @@ Skill tests should verify that generated skills teach:
 
 Mock-agent adoption tests should ask a clean agent to use the generated skill for a small representative task and report the workflow it would follow. Useful failures include missing command side-effect warnings, unclear docs-only review policy, and unavailable skill file access in the agent runtime.
 
+Agent instruction tests should verify that `init` keeps `AGENTS.md` concise and does not duplicate the full skill or product design there.
+
 Watcher tests should eventually verify:
 
 - `agentkit watch` reuses the same reminder/status logic as the CLI
