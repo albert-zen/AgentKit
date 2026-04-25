@@ -29,6 +29,7 @@ def test_init_and_orient(tmp_path: Path) -> None:
 
     assert "Affected Components" in output
     assert "docs/design.md" in output
+    assert "Intent System Reminder" in output
 
 
 def test_init_creates_small_agentkit_agents_section(tmp_path: Path) -> None:
@@ -235,6 +236,9 @@ def test_start_task_writes_state_with_durable_sources(tmp_path: Path) -> None:
 
     assert "Task Started" in output
     assert "Durable Intent Sources" in output
+    assert "Intent System Reminder" in output
+    assert "Preserve what humans have already decided" in output
+    assert "Ask when a durable decision is missing" in output
     assert "docs/design.md" in output
     state = tmp_path / ".agentkit" / "tasks" / "current.json"
     assert state.exists()
@@ -405,6 +409,7 @@ def test_check_includes_lifecycle_reminder_and_writes_receipt(tmp_path: Path) ->
 
     assert code == 0
     assert "Lifecycle Reminder" in output
+    assert "Preserve what humans have already decided" in output
     assert "Run the review loop" in output
     assert "missing check receipt" not in output
     receipt = tmp_path / ".agentkit" / "receipts" / "checks" / f"{diff_fingerprint(tmp_path)}.json"
@@ -433,6 +438,7 @@ def test_watch_once_reuses_reminder_output(tmp_path: Path) -> None:
     assert code == 0
     assert len(outputs) == 1
     assert "AgentKit Reminder" in outputs[0]
+    assert "Preserve what humans have already decided" in outputs[0]
 
 
 def test_watch_stops_for_blocked_task(tmp_path: Path) -> None:
@@ -854,7 +860,8 @@ layers: {}
 
     output = docs_impact(tmp_path, paths=["src/example.py", "web/design.md"])
 
-    assert "Docs Impact Assessment Needed\nNo related docs" in output
+    assert "Persistence Decision Needed\nNo related docs" in output
+    assert "no-persistence-needed note" in output
 
 
 def test_lint_architecture_detects_reverse_import(tmp_path: Path) -> None:
@@ -1068,6 +1075,8 @@ review:
     assert "docs/design.md" in output
     assert "docs/components/core/design.md" in output
     assert "Do not make an inline summary the source of truth" in output
+    assert "unsupported durable decisions" in output
+    assert "blocked question" in output
     assert output.index("## Durable Intent Sources") < output.index("## Instruction For Implementing Agent")
     assert output.index("## Durable Intent Sources") < output.index("Do not make an inline summary")
 

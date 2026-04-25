@@ -284,6 +284,13 @@ TASK_STOPWORDS = {
 }
 
 
+INTENT_SYSTEM_REMINDER = [
+    "Preserve what humans have already decided. Persist what future agents need to know. Ask when a durable decision is missing.",
+    "Use the intent files above as repository memory for human intent, design taste, boundaries, workflows, and testing expectations. If this work changes what future agents should rely on, update the relevant docs or tests; if it does not, note why no persistence update was needed.",
+    "If the files do not answer an important product, architecture, API, workflow, or taste decision, continue only with the parts that are clear and ask the human for the missing intent. If the uncertainty blocks responsible progress, close as blocked with `agentkit close --blocked-question \"...\"`.",
+]
+
+
 def init_repo(repo: Path, force: bool = False) -> str:
     created: list[str] = []
     _ensure_agentkit_agents_section(_agents_path(repo), created, force)
@@ -442,6 +449,7 @@ def start_task(
         [
             section("Task Started", [task_id]),
             section("Durable Intent Sources", bullet(docs)),
+            section("Intent System Reminder", INTENT_SYSTEM_REMINDER),
             section("Focus Notes", bullet(focus_notes or [])),
             section("Affected Components", bullet([_component_label(item) for item in components])),
             section("Potential Design Gaps", bullet(gaps)),
@@ -637,20 +645,11 @@ def orient(
     lines = [
         section("Affected Components", bullet([_component_label(item) for item in components])),
         section("Read First", bullet(docs)),
+        section("Intent System Reminder", INTENT_SYSTEM_REMINDER),
         section("Potential Design Gaps", bullet(gaps)),
         section("Likely Design Impact", bullet(impact)),
         section("Suggested Tests And Checks", bullet(checks)),
     ]
-    if gaps:
-        lines.append(
-            section(
-                "Human Design Check",
-                [
-                    "If this task changes product behavior, API, data model, architecture, workflow, or state transitions, ask the human to approve the missing design before implementing that part.",
-                    "If other parts are clear, continue with those and isolate the blocked decision.",
-                ],
-            )
-        )
     return "\n\n".join(lines)
 
 
@@ -707,10 +706,17 @@ def docs_impact(repo: Path, paths: list[str] | None = None) -> str:
             section("Related Docs", bullet(related_docs)),
             section("Docs Changed", bullet(docs_changed)),
             section(
-                "Docs Impact Assessment Needed",
+                "Persistence Decision Needed",
                 bullet(missing)
+                + [
+                    "AgentKit is not saying every related doc must change. Decide whether this work changes durable intent, public behavior, boundaries, workflows, or testing expectations.",
+                    "If it does, update the relevant docs or tests. If it does not, mention why no persistence update was needed. If the right answer depends on missing human intent, ask the human or close as blocked.",
+                ]
                 if missing
-                else ["No related docs are missing from the current change set, based on AgentKit mapping."],
+                else [
+                    "No related docs are missing from the current change set, based on AgentKit mapping.",
+                    "Still decide whether the work changes durable intent, behavior, boundaries, workflows, or testing expectations; if not, a short no-persistence-needed note is enough.",
+                ],
             ),
         ]
     )
@@ -757,7 +763,8 @@ def review_guidance(
         "Give the reviewer durable intent source paths first, then changed files and validation output.",
         "Do not make an inline summary the source of truth; if you include one, label it as a convenience summary and tell the reviewer to verify it against the durable docs.",
         "Tell the reviewer to compare the durable human intent docs and original task against the implementation.",
-        "Ask it to report intent drift, unsupported assumptions, missing tests, stale docs, architecture violations, and hidden failure modes.",
+        "Ask it to report intent drift, unsupported durable decisions, missing tests, stale docs, architecture violations, and hidden failure modes.",
+        "If the implementation makes a product, architecture, API, workflow, or taste decision that the intent files do not support, document it, revise it, or bring it back to the human as a blocked question.",
         "Fix meaningful findings before asking the human to spend attention.",
         "After fixing reviewer findings, run another clean-context review pass.",
         "Repeat review -> fix -> review until no meaningful findings remain, or only low-value residual risks are left for the human.",

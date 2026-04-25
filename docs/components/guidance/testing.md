@@ -9,6 +9,7 @@ Guidance tests should use small temporary repositories and assert that AgentKit 
 - architecture violations
 - review guidance
 - task start output
+- intent system reminder wording in start, orient, docs-impact, review, and lifecycle output
 - task close status
 - hook installation behavior
 - status and reminder output
@@ -50,6 +51,7 @@ Fallback tests should verify that blocked closure preserves:
 Reminder tests should eventually verify:
 
 - open tasks produce reminder text
+- reminders preserve the core intent-system wording about preserving human decisions, persisting future context, and asking when durable decisions are missing
 - completed tasks do not produce reminders
 - blocked tasks wait for new human input
 - no-task status scopes `agentkit start` guidance to repository-changing work

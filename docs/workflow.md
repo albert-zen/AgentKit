@@ -178,6 +178,8 @@ The important product rule is that reminders are derived from durable state, not
 
 During execution, the agent implements against the task record and the durable docs it references.
 
+The guiding reminder is: preserve what humans have already decided, persist what future agents need to know, and ask when a durable decision is missing. The fallback path is part of this same workflow: when the intent files do not answer an important product, architecture, API, workflow, or taste question, the agent should avoid inventing a durable decision and ask the human instead.
+
 The agent should repeatedly ask:
 
 - Am I still implementing the recorded task todo?

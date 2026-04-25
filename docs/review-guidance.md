@@ -94,7 +94,7 @@ The guidance should tell the implementing agent:
 2. Read the project-level design docs first.
 3. Read the component or feature docs related to the changed files.
 4. Ask the reviewer to compare those docs and the original human request against the implementation.
-5. Ask the reviewer to focus on intent drift, missing tests, stale docs, and architecture violations.
+5. Ask the reviewer to focus on intent drift, unsupported durable decisions, missing tests, stale docs, and architecture violations.
 6. Fix meaningful reviewer findings before asking for human review.
 7. After fixing reviewer findings, request another clean-context review pass.
 8. Continue review -> fix -> review until no meaningful findings remain, or only low-value residual risks are left for the human.
@@ -120,7 +120,7 @@ Compare the durable human intent docs and original task against the implementati
 
 Look for:
 - behavior that does not satisfy the stated intent
-- unsupported assumptions
+- unsupported durable product, architecture, API, workflow, or taste decisions
 - missing tests
 - stale or missing docs
 - architecture rule violations

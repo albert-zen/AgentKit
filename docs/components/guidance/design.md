@@ -65,6 +65,12 @@ The guidance component should support `agentkit start` and `agentkit close`.
 - review expectation
 - design gaps and blocked questions
 
+Command output should frame that context as part of the repository's intent file system, not only as lifecycle ceremony. `start`, `orient`, `docs-impact`, review guidance, and lifecycle reminders should use concise, gentle language that combines three ideas in one place:
+
+- preserve what humans have already decided
+- persist what future agents need to know in docs or tests
+- ask the human when a durable product, architecture, API, workflow, or taste decision is missing
+
 The task may be started after human-agent discussion, or started early and refined once the discussion clarifies the focus.
 
 `close` should verify that the task has either completed responsibly or stopped at a recorded human decision point.
@@ -79,7 +85,7 @@ Closeout should avoid noisy loops by using state:
 - unchanged diffs should not repeat identical acknowledged warnings forever
 - blocked tasks with recorded human questions should wait for new input
 
-Fallback handling is part of guidance. If checks or review cannot proceed, the agent must record the reason and human question, then still use `agentkit close --blocked-question "..."`.
+Fallback handling is part of the intent-file workflow, not a separate ceremony. If checks, review, or implementation cannot proceed because a durable decision is ambiguous or missing, the agent should keep going only on clear parts, record the blocker, ask the human for the missing intent, and use `agentkit close --blocked-question "..."` when the uncertainty prevents responsible progress.
 
 Reminder guidance should distinguish state from delivery. AgentKit owns the open-task state, missing-gate detection, stale-receipt detection, and reminder text. Delivery can come from runtime adapters such as ProjectMan, Symphony, editor integrations, schedulers, or agent hooks, and it can also come from an AgentKit-owned local `agentkit watch` process.
 

@@ -9,6 +9,12 @@ from agentkit.render import bullet, section
 from agentkit.task_state import DEFAULT_TASK_ID, load_task_state
 
 
+INTENT_REMINDER = (
+    "Preserve what humans have already decided. Persist what future agents need to know. "
+    "Ask when a durable decision is missing."
+)
+
+
 @dataclass(frozen=True)
 class LifecycleSample:
     task_id: str
@@ -161,13 +167,20 @@ def render_reminder(sample: LifecycleSample) -> str:
     if sample.state == "ready_to_close":
         return "\n\n".join(
             [
-                section("AgentKit Reminder", ["Task appears ready to close."]),
+                section(
+                    "AgentKit Reminder",
+                    [
+                        "Task appears ready to close.",
+                        INTENT_REMINDER,
+                        "Before finishing, decide whether this work changed durable intent, behavior, boundaries, workflows, or testing expectations. If it did, persist the change in docs or tests; if not, a short no-persistence-needed note is enough.",
+                    ],
+                ),
                 section("Next Actions", bullet(sample.next_actions)),
             ]
         )
     return "\n\n".join(
         [
-            section("AgentKit Reminder", [f"Task `{sample.task_id}` is still open and needs work."]),
+            section("AgentKit Reminder", [f"Task `{sample.task_id}` is still open and needs work.", INTENT_REMINDER]),
             section("Missing Gates", bullet(sample.missing_gates)),
             section("Next Actions", bullet(sample.next_actions)),
         ]
