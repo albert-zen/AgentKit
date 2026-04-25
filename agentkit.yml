@@ -110,6 +110,7 @@ components:
     description: Repository hygiene, package boundaries, and AgentKit's own dogfood baseline.
     code:
       - .gitignore
+      - LICENSE
       - src/agentkit/__init__.py
     docs:
       - docs/components/governance/design.md
