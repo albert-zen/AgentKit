@@ -1,0 +1,138 @@
+version: 1
+
+docs:
+  root: docs
+  design: docs/design.md
+  workflow: docs/workflow.md
+  decisions: docs/decisions
+
+components:
+  cli:
+    description: AgentKit command-line interface and command routing.
+    code:
+      - src/agentkit/cli.py
+      - src/agentkit/__main__.py
+      - pyproject.toml
+    docs:
+      - docs/components/cli/design.md
+      - docs/components/cli/testing.md
+    required_docs:
+      - design
+      - testing
+    keywords:
+      - cli
+      - command
+      - argparse
+
+  configuration:
+    description: agentkit.yml schema and configuration parsing.
+    code:
+      - src/agentkit/config.py
+      - agentkit.yml
+      - tests/test_config.py
+    docs:
+      - docs/components/configuration/design.md
+      - docs/components/configuration/schema.md
+      - docs/components/configuration/testing.md
+    required_docs:
+      - design
+      - schema
+      - testing
+    keywords:
+      - config
+      - schema
+      - yaml
+
+  guidance:
+    description: Agent-facing orientation, intent guidance, docs-impact, and review guidance.
+    code:
+      - src/agentkit/commands.py
+      - src/agentkit/render.py
+      - src/agentkit/git.py
+      - src/agentkit/fs.py
+      - tests/test_commands.py
+    docs:
+      - docs/components/guidance/design.md
+      - docs/components/guidance/testing.md
+      - docs/implementation-model.md
+      - docs/review-guidance.md
+    required_docs:
+      - design
+      - testing
+    keywords:
+      - orient
+      - guidance
+      - docs-impact
+      - review
+
+  docs:
+    description: Product design, workflow, roadmap, and maintainability documentation.
+    code:
+      - docs/**
+      - README.md
+      - AGENTS.md
+      - .codex/skills/agentkit/SKILL.md
+    docs:
+      - docs/design.md
+      - docs/workflow.md
+      - docs/roadmap.md
+      - docs/implementation-model.md
+    required_docs:
+      - design
+    keywords:
+      - docs
+      - documentation
+      - maintainability
+
+  governance:
+    description: Repository hygiene, package boundaries, and AgentKit's own dogfood baseline.
+    code:
+      - .gitignore
+      - src/agentkit/__init__.py
+    docs:
+      - docs/components/governance/design.md
+      - docs/components/governance/testing.md
+    required_docs:
+      - design
+      - testing
+    keywords:
+      - governance
+      - repository
+      - git
+
+layers:
+  config:
+    paths:
+      - src/agentkit/config.py
+    may_import: []
+  utilities:
+    paths:
+      - src/agentkit/fs.py
+      - src/agentkit/git.py
+      - src/agentkit/render.py
+    may_import:
+      - config
+  commands:
+    paths:
+      - src/agentkit/commands.py
+    may_import:
+      - config
+      - utilities
+  cli:
+    paths:
+      - src/agentkit/cli.py
+      - src/agentkit/__main__.py
+    may_import:
+      - commands
+
+review:
+  require_for:
+    - public_api
+    - data_model
+    - architecture
+    - guidance
+    - cli
+  default: warn
+
+skills:
+  output: .codex/skills/agentkit/SKILL.md
