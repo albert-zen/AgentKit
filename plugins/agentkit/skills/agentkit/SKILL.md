@@ -86,7 +86,7 @@ agentkit check
 agentkit review-guidance
 ```
 
-If review is expected, spawn or request a clean-context reviewer with the guidance AgentKit returns.
+If review is expected, use a separate Clean Context Sub-Agent Reviewer with the guidance AgentKit returns when subagents are available. Same-thread self-review does not count as review complete. If subagents are not available, use the low-risk skip-review path only when appropriate.
 
 Do not treat review as a transcript storage task. AgentKit only needs the main agent to acknowledge that the review loop was completed for the current diff. If review reveals durable design, risk, or testing knowledge, record that in the repository docs.
 

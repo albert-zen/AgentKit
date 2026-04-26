@@ -760,7 +760,8 @@ Validate import direction and forbidden dependencies.
 
 ### `agentkit review-guidance`
 
-Return instructions that the implementing agent can use when spawning or requesting a clean-context reviewer.
+Return instructions that the implementing agent can use when briefing a
+separate Clean Context Sub-Agent Reviewer when subagents are available.
 
 The guidance should state:
 
@@ -796,7 +797,9 @@ AgentKit should support a standard implementation-review loop:
 4. Implementing agent runs local checks.
 5. Implementing agent calls AgentKit for review guidance.
 6. AgentKit tells the implementing agent whether review is expected and how to brief the reviewer.
-7. The implementing agent requests or spawns a clean-context reviewer when the environment supports it.
+7. The implementing agent uses a separate Clean Context Sub-Agent Reviewer when
+   the environment supports subagents. Same-thread self-review does not count as
+   review complete.
 8. Clean reviewer agent inspects the result.
 9. Implementing agent fixes meaningful findings.
 10. Implementing agent requests a second clean-context review after fixes.

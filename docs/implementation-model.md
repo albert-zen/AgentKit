@@ -444,7 +444,7 @@ Durable intent sources:
 - docs/components/orchestration/design.md
 - docs/components/orchestration/agent-run-lifecycle.md
 
-Spawn a clean-context reviewer and ask it to:
+Use a separate Clean Context Sub-Agent Reviewer and ask it to:
 1. Treat the durable intent sources above as the source of truth.
 2. Treat any inline summary as convenience context only.
 3. Review these changed files:
@@ -455,7 +455,10 @@ Spawn a clean-context reviewer and ask it to:
 5. Report intent drift, missing tests, stale docs, and architecture violations.
 ```
 
-AgentKit should not need to spawn the reviewer in the MVP. It tells the main agent how to do it.
+AgentKit should not need to spawn the reviewer in the MVP. It tells the main
+agent how to do it. Same-thread self-review does not count as review complete;
+when subagents are unavailable, the main agent should not mark review complete
+based on its own same-thread self-review.
 
 ## `agentkit skill`
 

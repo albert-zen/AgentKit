@@ -200,7 +200,9 @@ Recommended execution sequence:
 5. Run project tests.
 6. Run `agentkit check` and read any lifecycle reminders it reports.
 7. Run `agentkit review-guidance`.
-8. Spawn or request a clean-context reviewer when review is required.
+8. Use a separate Clean Context Sub-Agent Reviewer when review is required and
+   subagents are available; same-thread self-review does not count as review
+   complete.
 9. Fix meaningful reviewer findings.
 10. Repeat review -> fix -> review until no meaningful findings remain.
 11. Run `agentkit close`.

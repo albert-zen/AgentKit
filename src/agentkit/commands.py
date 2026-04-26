@@ -496,7 +496,8 @@ def review_guidance(
     docs = recommended_docs(repo, config, components)
     review_expected = _review_expected(config, components, task or "")
     reviewer_steps = [
-        "Spawn or request a clean-context reviewer when your environment supports it.",
+        "Use a separate Clean Context Sub-Agent Reviewer when subagents are available; same-thread self-review does not count as review complete.",
+        "If subagents are not available, do not mark review complete based on same-thread self-review; use the low-risk skip-review path only when appropriate.",
         "Give the reviewer durable intent source paths first, then changed files and validation output.",
         "Do not make an inline summary the source of truth; if you include one, label it as a convenience summary and tell the reviewer to verify it against the durable docs.",
         "Tell the reviewer to compare the durable human intent docs and original task against the implementation.",

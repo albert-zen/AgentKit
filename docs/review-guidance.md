@@ -9,12 +9,14 @@ This document defines how AgentKit should help an implementing agent request cle
 AgentKit does not need to create a separate review artifact by default. The lightweight baseline is to return guidance to the implementing agent:
 
 - whether review is expected
-- how to spawn or request a clean-context reviewer
+- how to use a separate Clean Context Sub-Agent Reviewer when subagents are
+  available
 - what docs and code the reviewer should inspect
 - a trigger policy
 - expected reviewer output
 
-The implementing agent can then spawn a sub-agent, call another agent, or hand the guidance to an external system such as Symphony.
+The implementing agent can then spawn a sub-agent with the guidance. Same-thread
+self-review does not count as review complete.
 
 AgentKit may optionally generate a context summary for external systems, logs, or debugging, but that is not the primary workflow.
 
@@ -57,7 +59,9 @@ Before requesting review, the implementing agent should:
 6. Read any lifecycle reminders emitted by `agentkit check`, `agentkit status`, or `agentkit remind`.
 7. Note docs updates or explain why none were needed.
 8. Ask AgentKit for review guidance.
-9. Spawn or request a clean-context reviewer with that guidance when review is expected.
+9. Use a separate Clean Context Sub-Agent Reviewer with that guidance when
+   review is expected and subagents are available. Same-thread self-review does
+   not count as review complete.
 10. Fix meaningful reviewer findings.
 11. Record durable design decisions, risks, or unresolved questions in the repository docs when they matter for future maintainability.
 12. Acknowledge the completed review loop with `agentkit close --review-complete`, or record the low-risk fallback with `agentkit close --skip-review-reason "..."`.

@@ -1236,6 +1236,10 @@ review:
     assert "docs/design.md" in output
     assert "docs/components/core/design.md" in output
     assert "Do not make an inline summary the source of truth" in output
+    assert "Clean Context Sub-Agent Reviewer" in output
+    assert "same-thread self-review" in output
+    assert "low-risk skip-review path" in output
+    assert "equivalent clean-context reviewer" not in output
     assert "unsupported durable decisions" in output
     assert "blocked question" in output
     assert output.index("## Durable Intent Sources") < output.index("## Instruction For Implementing Agent")
