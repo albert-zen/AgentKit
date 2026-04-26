@@ -15,6 +15,8 @@ The CLI is the primary interface for agents and humans. It routes commands to de
 
 The CLI should stay thin. It should parse arguments and delegate behavior to command functions. It should not contain configuration parsing, path matching, architecture lint logic, or git diff logic.
 
+Architecture lint implementation belongs in `architecture.py`; CLI and command routing should only expose and call it.
+
 ## Public Commands
 
 - `agentkit init`

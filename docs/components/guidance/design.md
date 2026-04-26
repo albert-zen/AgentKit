@@ -108,6 +108,9 @@ The guidance component should provide a shared lifecycle sampler:
 
 Current implementation modules:
 
+- `templates.py` owns default AgentKit setup text, skill text, and Codex plugin templates.
+- `architecture.py` owns Python import graph checks for configured dependency layers.
+- `codex.py` owns Codex watchdog installation and Stop-hook adapter behavior.
 - `task_state.py` reads and writes task state.
 - `receipts.py` reads and writes receipt files.
 - `maintainability.py` evaluates configured module size and responsibility budgets.

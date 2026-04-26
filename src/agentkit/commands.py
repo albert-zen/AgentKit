@@ -1,267 +1,34 @@
 from __future__ import annotations
 
-import ast
 import json
-import os
-import re
 from pathlib import Path
 
+from agentkit.architecture import lint_architecture
+from agentkit.codex import (
+    codex_hooks_feature_enabled,
+    codex_stop_hook,
+    codex_watchdog_command,
+    has_codex_watchdog_hook,
+    install_codex_watchdog,
+)
 from agentkit.config import AgentKitConfig, ComponentConfig, LayerConfig, load_config
 from agentkit.fs import expand_patterns, matches_any, relpath
 from agentkit.git import changed_paths, diff_fingerprint, git_path, is_git_repo
-from agentkit.lifecycle import reminder_text, render_reminder, sample_lifecycle, status_text
+from agentkit.lifecycle import reminder_text, status_text
 from agentkit.maintainability import lint_maintainability
 from agentkit.receipts import has_receipt, write_receipt
 from agentkit.render import bullet, section
 from agentkit.task_state import DEFAULT_TASK_ID, load_task_state, task_path, write_task_state
-
-
-AGENTKIT_AGENT_SECTION_MARKER = "<!-- agentkit:agents-section -->"
-
-AGENTKIT_AGENT_SECTION = f"""### AgentKit
-
-{AGENTKIT_AGENT_SECTION_MARKER}
-This repository uses AgentKit to keep agent-led changes tied to durable intent, checks, review, and closeout. For implementation, documentation edits, hook/plugin updates, or any repository-changing task, start with `agentkit start --task "..."`, use `agentkit check` plus `agentkit status` or `agentkit remind` while working, and finish with `agentkit close`. For read-only exploration, codebase orientation, or answering questions without edits, do not create an AgentKit task unless the work becomes long-running or the human asks for lifecycle tracking. For the full operating guide, read the AgentKit plugin skill.
-"""
-
-DEFAULT_AGENT_MD = f"""{AGENTKIT_AGENT_SECTION}
-"""
-
-
-DEFAULT_AGENTKIT_YML = """version: 1
-
-docs:
-  root: docs
-  design: docs/design.md
-  workflow: docs/workflow.md
-  decisions: docs/decisions
-
-components:
-  core:
-    description: Core product behavior.
-    code:
-      - src/**
-    docs:
-      - docs/design.md
-    required_docs:
-      - design
-    keywords:
-      - core
-
-layers: {}
-
-review:
-  require_for:
-    - public_api
-    - data_model
-    - architecture
-    - orchestration
-  default: warn
-
-skills:
-  source: plugins/agentkit/skills/agentkit/SKILL.md
-  output: plugins/agentkit/skills/agentkit/SKILL.md
-
-maintainability:
-  budgets: []
-"""
-
-DEFAULT_SKILL_MD = """---
-name: agentkit
-description: Preserve human intent and project maintainability by guiding agents to read durable intent files and persist meaningful design, docs, and test changes.
----
-
-# AgentKit Skill
-
-This repository uses AgentKit.
-
-## What AgentKit Gives You
-
-AgentKit keeps your work tied to durable repo intent. Use it to:
-
-- find the docs and components relevant to a task
-- remember the task's closeout gates
-- check docs impact and architecture rules
-- get lifecycle reminders while you work
-- ask for clean-context review before human attention
-- close the task as completed or blocked
-
-The skill is an operating guide. For deeper product or architecture intent, read the durable docs that AgentKit returns.
-
-## When To Start A Task
-
-Use the AgentKit task lifecycle for implementation work, documentation edits, hook/plugin changes, generated files, commits, or any task that changes repository state.
-
-Do not start a task for read-only exploration, codebase orientation, answering architecture questions, or lightweight audits with no edits. In those cases, read the relevant docs directly and use `agentkit status` or `agentkit remind` only if you need to inspect an already-open task.
-
-If read-only exploration turns into repository-changing work, start or resume the task before making edits so closeout gates apply to the change.
-
-## Repository-Changing Operating Loop
-
-1. Start or resume the task with `agentkit start`.
-2. Read the durable intent sources in the output.
-3. If design is missing or ambiguous for product behavior, API, data model, workflow, architecture, or state transitions, ask the human before implementing that part.
-4. Implement against tests and the repo's architecture rules.
-5. Run `agentkit check` and read any lifecycle reminder it prints.
-6. Run `agentkit review-guidance` and request clean-context review when expected.
-7. Fix meaningful reviewer findings.
-8. Run `agentkit close --review-complete`, or close as blocked with a recorded human question.
-
-## Start Of Task
-
-For repository-changing work, run:
-
-```text
-agentkit start
-```
-
-`start` writes repository-local task state under `.agentkit/`. In a read-only audit, orientation pass, or question-answering task, do not run `start`; read this skill and use read-only commands such as `agentkit status` or `agentkit remind` only when they help inspect existing state.
-
-If you know the component, run:
-
-```text
-agentkit start --component <name>
-```
-
-After discussion clarifies the task, preserve the focus:
-
-```text
-agentkit start --task "<refined task>" --focus-note "<human-approved focus>" --focus-doc <path>
-```
-
-Use `agentkit start --component <name>` when you already know the component. Otherwise, include the task text and let AgentKit infer affected components.
-
-## During Design
-
-Use:
-
-```text
-agentkit intent-guidance --component <name> --change-type <type>
-```
-
-Write the actual design content yourself. AgentKit tells you where it belongs.
-
-Useful change-type values include `architecture`, `data_model`, `public_api`, `orchestration`, `workflow`, `tests`, and `docs`.
-
-For docs-only wording tasks, ask the human for design only when the wording changes product meaning, command semantics, public behavior, workflow expectations, or accepted terminology. For local copyedits that preserve meaning, proceed with focused docs checks and review expectations from AgentKit.
-
-## Before Review
-
-Run:
-
-```text
-agentkit check
-agentkit review-guidance
-```
-
-If review is expected, spawn or request a clean-context reviewer with the guidance AgentKit returns.
-
-Do not treat review as a transcript storage task. AgentKit only needs the main agent to acknowledge that the review loop was completed for the current diff. If review reveals durable design, risk, or testing knowledge, record that in the repository docs.
-
-For low-risk docs-only wording changes, review may still be expected by local policy. Use `agentkit review-guidance` to decide. If the change is truly low risk, close with `agentkit close --skip-review-reason "..."` only when AgentKit allows it.
-
-## Lifecycle Reminders
-
-Use:
-
-```text
-agentkit status
-agentkit remind
-```
-
-`status` shows task facts and missing gates. `remind` shows the next action. `agentkit check` may also include lifecycle reminders.
-
-For a local reminder loop, use:
-
-```text
-agentkit watch
-```
-
-For Codex Stop-hook reminders, install explicit hook wiring:
-
-```text
-agentkit install-codex-watchdog --repo-local
-```
-
-If a Stop hook does not appear to run, check `.agentkit/codex-stop-hook.log`. No log usually means Codex did not invoke the hook.
-
-## Close Task
-
-Before ending the task, run:
-
-```text
-agentkit close --review-complete
-```
-
-If blocked on human input, run:
-
-```text
-agentkit close --blocked-question "..."
-```
-
-Use blocked close when continuing would require an unsupported assumption. Include the human question clearly.
-"""
-
-DEFAULT_CODEX_PLUGIN_JSON = """{
-  "name": "agentkit",
-  "version": "0.1.0",
-  "description": "Preserve human intent and project maintainability by guiding agents to read durable intent files and persist meaningful design, docs, and test changes.",
-  "skills": "./skills/",
-  "hooks": "./hooks.json",
-  "interface": {
-    "displayName": "AgentKit",
-    "shortDescription": "Preserve human intent and project maintainability through durable intent files.",
-    "longDescription": "AgentKit guides coding agents to read durable intent files before work and persist meaningful design, documentation, and test changes after work.",
-    "developerName": "AgentKit",
-    "category": "Productivity",
-    "capabilities": ["Read", "Write"],
-    "defaultPrompt": [
-      "Use AgentKit to start this task and follow the repository closeout workflow.",
-      "Use AgentKit to check whether this task is ready for review and closeout."
-    ]
-  }
-}
-"""
-
-DEFAULT_CODEX_PLUGIN_HOOKS_JSON = """{
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "agentkit codex-stop-hook",
-            "timeout": 30,
-            "statusMessage": "Checking AgentKit task closeout"
-          }
-        ]
-      }
-    ]
-  }
-}
-"""
-
-DEFAULT_CODEX_MARKETPLACE_JSON = """{
-  "name": "agentkit-local",
-  "interface": {
-    "displayName": "AgentKit Local"
-  },
-  "plugins": [
-    {
-      "name": "agentkit",
-      "source": {
-        "source": "local",
-        "path": "./plugins/agentkit"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    }
-  ]
-}
-"""
+from agentkit.templates import (
+    AGENTKIT_AGENT_SECTION,
+    AGENTKIT_AGENT_SECTION_MARKER,
+    DEFAULT_AGENT_MD,
+    DEFAULT_AGENTKIT_YML,
+    DEFAULT_CODEX_MARKETPLACE_JSON,
+    DEFAULT_CODEX_PLUGIN_HOOKS_JSON,
+    DEFAULT_CODEX_PLUGIN_JSON,
+    DEFAULT_SKILL_MD,
+)
 
 TASK_STOPWORDS = {
     "a",
@@ -395,7 +162,7 @@ def doctor(repo: Path) -> tuple[int, str]:
             recommendations.append("pre-commit hook missing; run `agentkit install-hooks` if local policy wants Git checks")
     codex_hooks_path = repo / ".codex" / "hooks.json"
     codex_config_path = repo / ".codex" / "config.toml"
-    if _has_codex_watchdog_hook(codex_hooks_path, _codex_watchdog_command(".agentkit/codex-stop-hook.log")) and _codex_hooks_feature_enabled(codex_config_path):
+    if has_codex_watchdog_hook(codex_hooks_path, codex_watchdog_command(".agentkit/codex-stop-hook.log")) and codex_hooks_feature_enabled(codex_config_path):
         ok.append("Codex watchdog hook is installed")
     else:
         recommendations.append("Codex watchdog hook missing; run `agentkit install-codex-watchdog --repo-local` to enable Stop-hook reminders")
@@ -578,59 +345,6 @@ def install_hooks(repo: Path, force: bool = False) -> str:
     )
     hook_path.chmod(0o755)
     return section("Hooks Installed", [relpath(hook_path, repo)])
-
-
-def install_codex_watchdog(
-    repo: Path,
-    *,
-    scope: str = "repo",
-    force: bool = False,
-    log_path: str = ".agentkit/codex-stop-hook.log",
-    codex_home: Path | None = None,
-) -> str:
-    if scope not in {"repo", "user"}:
-        raise ValueError("scope must be 'repo' or 'user'")
-    target_root = repo / ".codex" if scope == "repo" else _codex_home(codex_home)
-    hooks_path = target_root / "hooks.json"
-    config_path = target_root / "config.toml"
-    target_root.mkdir(parents=True, exist_ok=True)
-    created: list[str] = []
-    command = _codex_watchdog_command(log_path)
-    _ensure_codex_watchdog_hook(hooks_path, command, force, created)
-    _ensure_codex_hooks_feature(config_path, created)
-    return "\n\n".join(
-        [
-            section("Codex Watchdog Installed", [scope]),
-            section("Files", bullet(created or [str(hooks_path), str(config_path)])),
-            section(
-                "Next Verification",
-                [
-                    "Start a new Codex session in this repo, leave an AgentKit task open, and confirm the Stop hook writes the diagnostic log or continues the turn.",
-                ],
-            ),
-        ]
-    )
-
-
-def codex_stop_hook(repo: Path, payload_text: str, log_path: str | None = None) -> tuple[int, str]:
-    payload: dict[str, object] = {}
-    if payload_text.strip():
-        loaded = json.loads(payload_text)
-        if isinstance(loaded, dict):
-            payload = loaded
-    hook_repo = _repo_from_hook_payload(repo, payload)
-    sample = sample_lifecycle(hook_repo)
-    if log_path:
-        _append_codex_stop_log(hook_repo, log_path, sample.state)
-    if sample.state not in {"needs_work", "ready_to_close"}:
-        return (0, "")
-    reminder = render_reminder(sample)
-    reason = (
-        f"{reminder}\n\n"
-        "AgentKit has not reached a valid closeout state. Continue the task, complete the missing gates, "
-        "or run `agentkit close --blocked-question \"...\"` if human input is required."
-    )
-    return (0, json.dumps({"decision": "block", "reason": reason}))
 
 
 def orient(
@@ -834,35 +548,6 @@ def validate_manifest(repo: Path, config: AgentKitConfig) -> list[str]:
     return errors
 
 
-def lint_architecture(repo: Path) -> tuple[int, str]:
-    config = load_config(repo)
-    if not config.layers:
-        return (0, section("Architecture Lint", ["No layers configured"]))
-
-    files_by_layer: dict[str, list[Path]] = {
-        name: [path for path in expand_patterns(repo, layer.paths) if path.suffix == ".py"]
-        for name, layer in config.layers.items()
-    }
-    path_to_layer: dict[str, str] = {}
-    for name, files in files_by_layer.items():
-        for path in files:
-            path_to_layer[relpath(path, repo)] = name
-
-    module_to_layer = _python_module_index(repo, path_to_layer)
-    violations: list[str] = []
-    for layer_name, files in files_by_layer.items():
-        layer = config.layers[layer_name]
-        allowed = set(layer.may_import) | {layer_name}
-        for file_path in files:
-            for imported in _imports_from(file_path, repo, module_to_layer):
-                imported_layer = _resolve_imported_layer(imported, module_to_layer)
-                if imported_layer and imported_layer not in allowed:
-                    violations.append(
-                        f"{relpath(file_path, repo)} ({layer_name}) imports {imported} ({imported_layer}), allowed: {sorted(allowed)}"
-                    )
-    return (1 if violations else 0, section("Architecture Lint", bullet(violations) if violations else ["OK"]))
-
-
 def find_components(
     config: AgentKitConfig,
     paths: list[str],
@@ -996,92 +681,6 @@ def _ensure_agentkit_marketplace_entry(path: Path, created: list[str], force: bo
     created.append("marketplace AgentKit entry")
 
 
-def _ensure_codex_watchdog_hook(path: Path, command: str, force: bool, created: list[str]) -> None:
-    agentkit_group = {
-        "hooks": [
-            {
-                "type": "command",
-                "command": command,
-                "timeout": 30,
-                "statusMessage": "Checking AgentKit task closeout",
-            }
-        ]
-    }
-    if path.exists():
-        data = json.loads(path.read_text(encoding="utf-8") or "{}")
-    else:
-        data = {}
-    if not isinstance(data, dict):
-        raise ValueError(f"{path} must contain a JSON object")
-    hooks = data.setdefault("hooks", {})
-    if not isinstance(hooks, dict):
-        raise ValueError(f"{path} hooks field must be a JSON object")
-    stop_hooks = hooks.setdefault("Stop", [])
-    if not isinstance(stop_hooks, list):
-        raise ValueError(f"{path} hooks.Stop field must be a list")
-    for index, group in enumerate(stop_hooks):
-        if _is_agentkit_codex_stop_group(group):
-            if force or not _is_expected_agentkit_codex_stop_group(group, command):
-                stop_hooks[index] = agentkit_group
-                path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-                created.append(path.as_posix())
-            return
-    stop_hooks.append(agentkit_group)
-    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    created.append(path.as_posix())
-
-
-def _ensure_codex_hooks_feature(path: Path, created: list[str]) -> None:
-    if not path.exists():
-        path.write_text("[features]\ncodex_hooks = true\n", encoding="utf-8")
-        created.append(path.as_posix())
-        return
-    text = path.read_text(encoding="utf-8")
-    if _features_section_has_codex_hooks(text, "true") or re.search(r"(?m)^\s*features\.codex_hooks\s*=\s*true\s*$", text):
-        return
-    if re.search(r"(?m)^\s*features\.codex_hooks\s*=\s*false\s*$", text):
-        updated = re.sub(r"(?m)^(\s*features\.codex_hooks\s*=\s*)false\s*$", r"\1true", text, count=1)
-        path.write_text(updated, encoding="utf-8")
-        created.append(path.as_posix())
-        return
-    inline_features = re.search(r"(?m)^(\s*features\s*=\s*\{)([^}\n]*)(\}\s*)$", text)
-    if inline_features:
-        body = inline_features.group(2)
-        if re.search(r"\bcodex_hooks\s*=\s*true\b", body):
-            return
-        if re.search(r"\bcodex_hooks\s*=\s*false\b", body):
-            new_body = re.sub(r"\bcodex_hooks\s*=\s*false\b", "codex_hooks = true", body, count=1)
-        else:
-            prefix = f"{body.rstrip()}, " if body.strip() else ""
-            new_body = f"{prefix}codex_hooks = true "
-        updated = text[: inline_features.start(2)] + new_body + text[inline_features.end(2) :]
-        path.write_text(updated, encoding="utf-8")
-        created.append(path.as_posix())
-        return
-    lines = text.splitlines()
-    bounds = _features_section_bounds(lines)
-    if bounds:
-        start, end = bounds
-        for index in range(start, end):
-            if re.match(r"^\s*codex_hooks\s*=\s*false\s*$", lines[index]):
-                lines[index] = re.sub(r"^(\s*codex_hooks\s*=\s*)false\s*$", r"\1true", lines[index])
-                path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-                created.append(path.as_posix())
-                return
-        lines.insert(start, "codex_hooks = true")
-        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        created.append(path.as_posix())
-        return
-    if re.search(r"(?m)^\s*features\.", text):
-        separator = "" if text.endswith("\n") or not text else "\n"
-        path.write_text(f"{text}{separator}features.codex_hooks = true\n", encoding="utf-8")
-        created.append(path.as_posix())
-        return
-    separator = "" if text.endswith("\n") or not text else "\n"
-    path.write_text(f"{text}{separator}\n[features]\ncodex_hooks = true\n", encoding="utf-8")
-    created.append(path.as_posix())
-
-
 def _agents_path(repo: Path) -> Path:
     for name in ["AGENTS.md", "agents.md"]:
         candidate = repo / name
@@ -1102,37 +701,6 @@ def _has_agentkit_marketplace_entry(path: Path) -> bool:
     return any(isinstance(item, dict) and _is_agentkit_marketplace_entry(item) for item in plugins)
 
 
-def _has_codex_watchdog_hook(path: Path, expected_command: str | None = None) -> bool:
-    if not path.exists():
-        return False
-    try:
-        data = json.loads(path.read_text(encoding="utf-8") or "{}")
-    except json.JSONDecodeError:
-        return False
-    if not isinstance(data, dict):
-        return False
-    hooks = data.get("hooks")
-    if not isinstance(hooks, dict):
-        return False
-    stop_hooks = hooks.get("Stop")
-    if not isinstance(stop_hooks, list):
-        return False
-    if expected_command:
-        return any(_is_expected_agentkit_codex_stop_group(group, expected_command) for group in stop_hooks)
-    return any(_is_agentkit_codex_stop_group(group) for group in stop_hooks)
-
-
-def _codex_hooks_feature_enabled(path: Path) -> bool:
-    if not path.exists():
-        return False
-    text = path.read_text(encoding="utf-8")
-    return bool(
-        _features_section_has_codex_hooks(text, "true")
-        or re.search(r"(?m)^\s*features\.codex_hooks\s*=\s*true\s*$", text)
-        or re.search(r"(?m)^\s*features\s*=\s*\{[^}\n]*\bcodex_hooks\s*=\s*true\b[^}\n]*\}\s*$", text)
-    )
-
-
 def _is_agentkit_marketplace_entry(item: dict[str, object]) -> bool:
     source = item.get("source")
     policy = item.get("policy")
@@ -1148,76 +716,6 @@ def _is_agentkit_marketplace_entry(item: dict[str, object]) -> bool:
     )
 
 
-def _is_agentkit_codex_stop_group(group: object) -> bool:
-    return isinstance(group, dict) and any(
-        isinstance(item, dict) and str(item.get("command", "")).startswith("agentkit codex-stop-hook")
-        for item in group.get("hooks", [])
-    )
-
-
-def _is_expected_agentkit_codex_stop_group(group: object, expected_command: str) -> bool:
-    return isinstance(group, dict) and any(
-        isinstance(item, dict) and item.get("command") == expected_command for item in group.get("hooks", [])
-    )
-
-
-def _codex_watchdog_command(log_path: str) -> str:
-    return f'agentkit codex-stop-hook --log "{log_path}"'
-
-
-def _features_section_has_codex_hooks(text: str, value: str) -> bool:
-    lines = text.splitlines()
-    bounds = _features_section_bounds(lines)
-    if not bounds:
-        return False
-    start, end = bounds
-    return any(re.match(rf"^\s*codex_hooks\s*=\s*{value}\s*$", line) for line in lines[start:end])
-
-
-def _features_section_bounds(lines: list[str]) -> tuple[int, int] | None:
-    start: int | None = None
-    for index, line in enumerate(lines):
-        if re.match(r"^\s*\[features]\s*$", line):
-            start = index + 1
-            break
-    if start is None:
-        return None
-    end = len(lines)
-    for index in range(start, len(lines)):
-        if re.match(r"^\s*\[[^\]]+]\s*$", lines[index]):
-            end = index
-            break
-    return start, end
-
-
-def _append_codex_stop_log(repo: Path, log_path: str, state: str) -> None:
-    path = Path(log_path)
-    if not path.is_absolute():
-        path = repo / path
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("", encoding="utf-8") if not path.exists() else None
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps({"event": "Stop", "state": state}) + "\n")
-
-
-def _codex_home(override: Path | None = None) -> Path:
-    if override:
-        return override
-    env_home = os.environ.get("CODEX_HOME")
-    if env_home:
-        return Path(env_home)
-    return Path.home() / ".codex"
-
-
-def _repo_from_hook_payload(default_repo: Path, payload: dict[str, object]) -> Path:
-    cwd = payload.get("cwd")
-    start = Path(str(cwd)).resolve() if cwd else default_repo
-    for candidate in [start, *start.parents]:
-        if (candidate / "agentkit.yml").exists():
-            return candidate
-    return default_repo
-
-
 def _component_label(component: ComponentConfig) -> str:
     return f"{component.name}: {component.description}" if component.description else component.name
 
@@ -1226,85 +724,6 @@ def _pattern_has_match(repo: Path, pattern: str) -> bool:
     if any(char in pattern for char in "*?["):
         return any(repo.glob(pattern.replace("\\", "/")))
     return (repo / pattern).exists()
-
-
-def _imports_from(path: Path, repo: Path, module_to_layer: dict[str, str]) -> list[str]:
-    try:
-        tree = ast.parse(path.read_text(encoding="utf-8"))
-    except SyntaxError:
-        return []
-    imports: list[str] = []
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            imports.extend(alias.name for alias in node.names)
-        elif isinstance(node, ast.ImportFrom):
-            resolved = _resolve_import_from(path, repo, node.module, node.level)
-            if resolved:
-                imports.append(resolved)
-                imports.extend(
-                    f"{resolved}.{alias.name}"
-                    for alias in node.names
-                    if _resolve_imported_layer(f"{resolved}.{alias.name}", module_to_layer)
-                )
-    return imports
-
-
-def _resolve_import_from(path: Path, repo: Path, module: str | None, level: int) -> str | None:
-    if level == 0:
-        return module
-    current = _module_name_for_path(path, repo)
-    if not current:
-        return module
-    package_parts = current.split(".")[:-1]
-    if level > 1:
-        package_parts = package_parts[: -(level - 1)]
-    if module:
-        package_parts.extend(module.split("."))
-    return ".".join(part for part in package_parts if part)
-
-
-def _python_module_index(repo: Path, path_to_layer: dict[str, str]) -> dict[str, str]:
-    index: dict[str, str] = {}
-    for path, layer in path_to_layer.items():
-        if not path.endswith(".py"):
-            continue
-        module_name = _module_name_for_relpath(path)
-        if module_name:
-            index[module_name] = layer
-    return index
-
-
-def _module_name_for_path(path: Path, repo: Path) -> str | None:
-    return _module_name_for_relpath(relpath(path, repo))
-
-
-def _module_name_for_relpath(path: str) -> str | None:
-    if not path.endswith(".py"):
-        return None
-    without_suffix = path[:-3]
-    parts = without_suffix.split("/")
-    if "src" in parts:
-        parts = parts[parts.index("src") + 1 :]
-    if parts and parts[-1] == "__init__":
-        parts = parts[:-1]
-    return ".".join(parts) if parts else None
-
-
-def _resolve_imported_layer(imported: str, module_to_layer: dict[str, str]) -> str | None:
-    parts = imported.split(".")
-    for end in range(len(parts), 0, -1):
-        candidate = ".".join(parts[:end])
-        if candidate in module_to_layer:
-            return module_to_layer[candidate]
-        dotted_prefix = f"{candidate}."
-        descendant_layers = {
-            layer
-            for module, layer in module_to_layer.items()
-            if module.startswith(dotted_prefix)
-        }
-        if len(descendant_layers) == 1:
-            return next(iter(descendant_layers))
-    return None
 
 
 def _review_expected(config: AgentKitConfig, components: list[ComponentConfig], task: str) -> bool:

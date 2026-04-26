@@ -12,6 +12,7 @@ components:
     code:
       - src/agentkit/cli.py
       - src/agentkit/__main__.py
+      - src/agentkit/architecture.py
       - pyproject.toml
     docs:
       - docs/components/cli/design.md
@@ -48,9 +49,11 @@ components:
     code:
       - src/agentkit/commands.py
       - src/agentkit/render.py
+      - src/agentkit/templates.py
       - src/agentkit/git.py
       - src/agentkit/fs.py
       - src/agentkit/maintainability.py
+      - src/agentkit/codex.py
       - src/agentkit/lifecycle.py
       - src/agentkit/receipts.py
       - src/agentkit/task_state.py
@@ -134,8 +137,10 @@ layers:
       - src/agentkit/fs.py
       - src/agentkit/git.py
       - src/agentkit/render.py
+      - src/agentkit/templates.py
       - src/agentkit/receipts.py
       - src/agentkit/task_state.py
+      - src/agentkit/architecture.py
       - src/agentkit/maintainability.py
     may_import:
       - config
@@ -143,6 +148,7 @@ layers:
     paths:
       - src/agentkit/lifecycle.py
       - src/agentkit/watch.py
+      - src/agentkit/codex.py
     may_import:
       - utilities
   commands:
@@ -178,17 +184,20 @@ maintainability:
     - name: commands-orchestration
       paths:
         - src/agentkit/commands.py
-      max_lines: 900
-      max_functions: 35
+      max_lines: 1000
+      max_functions: 45
       max_classes: 0
       mode: warn
-      guidance: "commands.py is carrying too much orchestration surface; prefer extracting templates, maintainability lint, or guidance rendering before adding more behavior."
+      guidance: "commands.py should stay near command orchestration; prefer extracting Codex hook helpers or guidance rendering before adding more behavior."
     - name: focused-modules
       paths:
         - src/agentkit/config.py
         - src/agentkit/cli.py
         - src/agentkit/lifecycle.py
         - src/agentkit/maintainability.py
+        - src/agentkit/templates.py
+        - src/agentkit/architecture.py
+        - src/agentkit/codex.py
       max_lines: 350
       max_functions: 25
       max_classes: 8
