@@ -66,6 +66,7 @@ When writing `AGENTS.md`, `init` should create or append a concise low-level Age
 - docs root and durable intent locations
 - component-to-doc mappings
 - architecture layers and dependency rules
+- maintainability budgets once module responsibilities are clear
 - project-specific links and conventions
 - deterministic hooks through `agentkit install-hooks`
 
@@ -83,6 +84,8 @@ Outputs:
 - optional improvements for project-policy surfaces such as hooks or architecture layers
 
 The first implementation should check for AgentKit entry guidance in `AGENTS.md` or `agents.md`, `agentkit.yml`, valid manifest references, component mappings, docs, the AgentKit plugin skill, and optional Git hooks.
+
+`doctor` may recommend maintainability budgets when none are configured, but an empty budget list should not be treated as an invalid repo. Budgets are most useful after humans and agents understand the repository's module responsibilities well enough to set meaningful limits.
 
 ## `agentkit start`
 
@@ -285,6 +288,8 @@ Run configured checks:
 This should be the command agents run before review.
 
 Maintainability budgets are repo-local reminders, not a replacement for formatters or language linters. Projects can configure file-level limits such as `max_lines`, `max_functions`, and `max_classes` in `agentkit.yml`; warning budgets surface pressure to split modules, while failing budgets can enforce hard boundaries when the project is ready.
+
+An empty `maintainability.budgets` list means there are no budget checks to run. `check` should not nag about missing budgets; readiness nudges belong in `init` and `doctor`.
 
 `check` should stay safe for Git hooks: it must remain deterministic and must not spawn reviewers or require long-running LLM judgment. It may include a lifecycle reminder section derived from `.agentkit/` task state, so an agent that only remembers to run `check` still sees missing closeout gates.
 

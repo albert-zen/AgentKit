@@ -56,6 +56,8 @@ The guidance component should support `agentkit start` and `agentkit close`.
 
 `init` should guide the agent to finish repository maintainability setup, not merely create files. It should point agents toward docs structure, component mappings, architecture rules, local skills, hooks, and project-specific configuration.
 
+It should also mention maintainability budgets as a later configuration step. New repositories often do not yet know which modules deserve strict limits, so the prompt should frame budgets as something to add once component responsibilities become clear.
+
 `start` should persist the task's durable context:
 
 - task todo

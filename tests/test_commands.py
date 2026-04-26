@@ -25,12 +25,14 @@ from agentkit.watch import watch_task
 
 
 def test_init_and_orient(tmp_path: Path) -> None:
-    init_repo(tmp_path)
+    init_output = init_repo(tmp_path)
     output = orient(tmp_path, component_names=["core"], paths=[], task="")
 
     assert "Affected Components" in output
     assert "docs/design.md" in output
     assert "Intent System Reminder" in output
+    assert "Next Configuration" in init_output
+    assert "maintainability budgets" in init_output
 
 
 def test_init_creates_small_agentkit_agents_section(tmp_path: Path) -> None:
@@ -180,6 +182,7 @@ def test_doctor_reports_ready_initialized_repo(tmp_path: Path) -> None:
     assert "ready" in output
     assert "AGENTS.md contains AgentKit entry guidance" in output
     assert "canonical AgentKit skill source exists" in output
+    assert "No maintainability budgets configured" in output
     assert "Codex watchdog hook missing" in output
 
 
@@ -228,6 +231,40 @@ skills:
     assert code == 0
     assert "docs/product.md exists" in output
     assert "docs/process.md exists" in output
+
+
+def test_doctor_reports_configured_maintainability_budgets(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "example.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (tmp_path / "agentkit.yml").write_text(
+        """
+version: 1
+docs:
+  design: docs/design.md
+components:
+  core:
+    code:
+      - src/**
+    docs:
+      - docs/design.md
+layers: {}
+maintainability:
+  budgets:
+    - name: core
+      paths:
+        - src/example.py
+      max_lines: 100
+""",
+        encoding="utf-8",
+    )
+    generate_skill(tmp_path)
+
+    code, output = doctor(tmp_path)
+
+    assert code == 0
+    assert "maintainability budgets configured: 1" in output
+    assert "No maintainability budgets configured" not in output
 
 
 def test_start_task_writes_state_with_durable_sources(tmp_path: Path) -> None:

@@ -85,7 +85,17 @@ def init_repo(repo: Path, force: bool = False) -> str:
     _write_if_missing(repo / "plugins" / "agentkit" / "hooks.json", DEFAULT_CODEX_PLUGIN_HOOKS_JSON, created, force)
     _write_if_missing(repo / "plugins" / "agentkit" / "skills" / "agentkit" / "SKILL.md", DEFAULT_SKILL_MD, created, force)
     _ensure_agentkit_marketplace_entry(repo / ".agents" / "plugins" / "marketplace.json", created, force)
-    return section("AgentKit Init", bullet(created or ["No files changed"]))
+    return "\n\n".join(
+        [
+            section("AgentKit Init", bullet(created or ["No files changed"])),
+            section(
+                "Next Configuration",
+                [
+                    "When component responsibilities become clear, consider adding maintainability budgets under `maintainability.budgets` to keep large modules from growing past human-approved boundaries.",
+                ],
+            ),
+        ]
+    )
 
 
 def doctor(repo: Path) -> tuple[int, str]:
@@ -123,6 +133,12 @@ def doctor(repo: Path) -> tuple[int, str]:
                 ok.append(f"architecture layers configured: {len(config.layers)}")
             else:
                 recommendations.append("No architecture layers configured in agentkit.yml; add them when dependency direction matters")
+            if config.maintainability.budgets:
+                ok.append(f"maintainability budgets configured: {len(config.maintainability.budgets)}")
+            else:
+                recommendations.append(
+                    "No maintainability budgets configured; once component responsibilities are clear, consider adding budgets for large orchestration files, adapters, and core modules"
+                )
             skill_source = repo / config.skills.source
             if skill_source.exists():
                 ok.append("canonical AgentKit skill source exists")
