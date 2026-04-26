@@ -447,11 +447,71 @@ def test_check_includes_lifecycle_reminder_and_writes_receipt(tmp_path: Path) ->
 
     assert code == 0
     assert "Lifecycle Reminder" in output
+    assert "Maintainability Budgets" not in output
     assert "Preserve what humans have already decided" in output
     assert "Run the review loop" in output
     assert "missing check receipt" not in output
     receipt = tmp_path / ".agentkit" / "receipts" / "checks" / f"{diff_fingerprint(tmp_path)}.json"
     assert receipt.exists()
+
+
+def test_check_summarizes_passing_maintainability_budgets(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "one.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (tmp_path / "src" / "two.py").write_text("VALUE = 2\n", encoding="utf-8")
+    (tmp_path / "agentkit.yml").write_text(
+        """
+version: 1
+docs:
+  design: docs/design.md
+components: {}
+layers: {}
+maintainability:
+  budgets:
+    - name: small-files
+      paths:
+        - src/*.py
+      max_lines: 10
+      max_functions: 1
+      max_classes: 0
+""",
+        encoding="utf-8",
+    )
+
+    code, output = check(tmp_path)
+
+    assert code == 0
+    assert "Maintainability Budgets" in output
+    assert "OK: 2 files within configured budgets" in output
+    assert "src/one.py within small-files" not in output
+    assert "src/two.py within small-files" not in output
+
+
+def test_check_reports_unmatched_maintainability_budget(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    (tmp_path / "agentkit.yml").write_text(
+        """
+version: 1
+docs:
+  design: docs/design.md
+components: {}
+layers: {}
+maintainability:
+  budgets:
+    - name: missing-files
+      paths:
+        - src/*.py
+      max_lines: 10
+""",
+        encoding="utf-8",
+    )
+
+    code, output = check(tmp_path)
+
+    assert code == 1
+    assert "Maintainability Budgets" in output
+    assert "missing-files: no files matched" in output
 
 
 def test_remind_stops_for_blocked_task(tmp_path: Path) -> None:

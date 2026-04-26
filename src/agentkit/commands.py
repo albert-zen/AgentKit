@@ -460,7 +460,7 @@ def check(repo: Path) -> tuple[int, str]:
     config = load_config(repo)
     errors = validate_manifest(repo, config)
     lint_code, lint_text = lint_architecture(repo)
-    maintainability_code, maintainability_text = lint_maintainability(repo)
+    maintainability_code, maintainability_text = lint_maintainability(repo, verbose=False)
     impact_text = docs_impact(repo)
     code = 1 if errors or lint_code or maintainability_code else 0
     if code == 0:
@@ -469,9 +469,10 @@ def check(repo: Path) -> tuple[int, str]:
         section("Manifest", ["OK"] if not errors else bullet(errors)),
         impact_text,
         lint_text,
-        maintainability_text,
         section("Lifecycle Reminder", [reminder_text(repo)]),
     ]
+    if maintainability_text:
+        parts.insert(3, maintainability_text)
     return (code, "\n\n".join(parts))
 
 

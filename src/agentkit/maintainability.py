@@ -8,10 +8,12 @@ from agentkit.fs import expand_patterns, relpath
 from agentkit.render import bullet, section
 
 
-def lint_maintainability(repo: Path) -> tuple[int, str]:
+def lint_maintainability(repo: Path, *, verbose: bool = True) -> tuple[int, str]:
     config = load_config(repo)
     if not config.maintainability.budgets:
-        return (0, section("Maintainability Budgets", ["No budgets configured"]))
+        if verbose:
+            return (0, section("Maintainability Budgets", ["No budgets configured"]))
+        return (0, "")
 
     findings: list[str] = []
     failures: list[str] = []
@@ -19,7 +21,9 @@ def lint_maintainability(repo: Path) -> tuple[int, str]:
     for budget in config.maintainability.budgets:
         files = expand_patterns(repo, budget.paths)
         if not files:
-            failures.append(f"{budget.name}: no files matched {list(budget.paths)}")
+            message = f"{budget.name}: no files matched {list(budget.paths)}"
+            findings.append(message)
+            failures.append(message)
             continue
         for path in files:
             file_findings = _findings_for_file(path, repo, budget)
@@ -30,8 +34,14 @@ def lint_maintainability(repo: Path) -> tuple[int, str]:
             else:
                 ok.append(f"{relpath(path, repo)} within {budget.name}")
 
-    lines: list[str] = []
-    if ok:
+    if verbose:
+        lines: list[str] = []
+    elif findings:
+        lines = [f"OK: {len(ok)} files within configured budgets"] if ok else []
+    else:
+        lines = [f"OK: {len(ok)} files within configured budgets"]
+
+    if verbose and ok:
         lines.extend(bullet(ok))
     if findings:
         lines.extend(bullet(findings))

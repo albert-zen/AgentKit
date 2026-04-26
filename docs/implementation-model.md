@@ -291,6 +291,8 @@ Maintainability budgets are repo-local reminders, not a replacement for formatte
 
 An empty `maintainability.budgets` list means there are no budget checks to run. `check` should not nag about missing budgets; readiness nudges belong in `init` and `doctor`.
 
+When budgets are configured and passing, `check` should summarize them with a compact count instead of listing every matched file. Detailed inventory belongs in `agentkit lint-maintainability`; `check` should expand maintainability output only for warnings or failures that need action.
+
 `check` should stay safe for Git hooks: it must remain deterministic and must not spawn reviewers or require long-running LLM judgment. It may include a lifecycle reminder section derived from `.agentkit/` task state, so an agent that only remembers to run `check` still sees missing closeout gates.
 
 `check` should not be the only owner of reminder logic. The underlying status/reminder engine should be callable by `status`, `remind`, `watch`, and external adapters.
