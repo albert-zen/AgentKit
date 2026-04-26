@@ -10,6 +10,7 @@ from agentkit.config import AgentKitConfig, ComponentConfig, LayerConfig, load_c
 from agentkit.fs import expand_patterns, matches_any, relpath
 from agentkit.git import changed_paths, diff_fingerprint, git_path, is_git_repo
 from agentkit.lifecycle import reminder_text, render_reminder, sample_lifecycle, status_text
+from agentkit.maintainability import lint_maintainability
 from agentkit.receipts import has_receipt, write_receipt
 from agentkit.render import bullet, section
 from agentkit.task_state import DEFAULT_TASK_ID, load_task_state, task_path, write_task_state
@@ -60,6 +61,9 @@ review:
 skills:
   source: plugins/agentkit/skills/agentkit/SKILL.md
   output: plugins/agentkit/skills/agentkit/SKILL.md
+
+maintainability:
+  budgets: []
 """
 
 DEFAULT_SKILL_MD = """---
@@ -726,14 +730,16 @@ def check(repo: Path) -> tuple[int, str]:
     config = load_config(repo)
     errors = validate_manifest(repo, config)
     lint_code, lint_text = lint_architecture(repo)
+    maintainability_code, maintainability_text = lint_maintainability(repo)
     impact_text = docs_impact(repo)
-    code = 1 if errors or lint_code else 0
+    code = 1 if errors or lint_code or maintainability_code else 0
     if code == 0:
         write_receipt(repo, "checks", diff_fingerprint(repo), {"status": "passed"})
     parts = [
         section("Manifest", ["OK"] if not errors else bullet(errors)),
         impact_text,
         lint_text,
+        maintainability_text,
         section("Lifecycle Reminder", [reminder_text(repo)]),
     ]
     return (code, "\n\n".join(parts))
@@ -821,6 +827,10 @@ def validate_manifest(repo: Path, config: AgentKitConfig) -> list[str]:
         for pattern in layer.paths:
             if not _pattern_has_match(repo, pattern):
                 errors.append(f"Layer {layer.name} references missing path/pattern: {pattern}")
+    for budget in config.maintainability.budgets:
+        for pattern in budget.paths:
+            if not _pattern_has_match(repo, pattern):
+                errors.append(f"Maintainability budget {budget.name} references missing path/pattern: {pattern}")
     return errors
 
 

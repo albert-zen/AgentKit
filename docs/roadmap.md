@@ -124,6 +124,19 @@ For Python projects, parse imports and enforce configurable layer rules.
 
 Later versions can add deterministic check adapters for TypeScript or other ecosystems where useful. This is not because LLMs need help understanding those languages; it is because AgentKit's own lint checks need parsers or analyzers to enforce boundaries reliably.
 
+### Maintainability Budgets
+
+Use repo-local budgets to keep important modules within human-approved maintainability limits.
+
+Examples:
+
+- maximum file lines
+- maximum function count
+- maximum class count
+- warning guidance that explains when to split a module
+
+This complements formatters and language linters. AgentKit owns the repository-specific taste: which modules should stay small, which files are allowed to be orchestration-heavy, and whether a budget is a warning or a hard failure.
+
 ### Intent Placement Guidance
 
 Tell the implementing agent where human-approved intent should be recorded.

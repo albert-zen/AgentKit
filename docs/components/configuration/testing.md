@@ -9,6 +9,7 @@ Configuration tests should prove that representative `agentkit.yml` data parses 
 - component parsing
 - layer parsing
 - skill source and output defaults
+- maintainability budget parsing
 
 AgentKit's own dogfood checks should also verify that new implementation modules are mapped to components and architecture layers in `agentkit.yml`.
 

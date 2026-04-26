@@ -6,6 +6,7 @@ Guidance tests should use small temporary repositories and assert that AgentKit 
 
 - component orientation
 - docs-impact mapping
+- maintainability budget warnings and failures
 - architecture violations
 - review guidance
 - task start output

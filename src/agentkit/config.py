@@ -48,6 +48,22 @@ class SkillConfig:
 
 
 @dataclass(frozen=True)
+class MaintainabilityBudgetConfig:
+    name: str
+    paths: tuple[str, ...] = ()
+    max_lines: int | None = None
+    max_functions: int | None = None
+    max_classes: int | None = None
+    mode: str = "warn"
+    guidance: str = ""
+
+
+@dataclass(frozen=True)
+class MaintainabilityConfig:
+    budgets: tuple[MaintainabilityBudgetConfig, ...] = ()
+
+
+@dataclass(frozen=True)
 class AgentKitConfig:
     version: int = 1
     docs: DocsConfig = field(default_factory=DocsConfig)
@@ -55,6 +71,7 @@ class AgentKitConfig:
     layers: dict[str, LayerConfig] = field(default_factory=dict)
     review: ReviewConfig = field(default_factory=ReviewConfig)
     skills: SkillConfig = field(default_factory=SkillConfig)
+    maintainability: MaintainabilityConfig = field(default_factory=MaintainabilityConfig)
 
 
 def load_config(repo: Path, config_path: Path | None = None) -> AgentKitConfig:
@@ -74,6 +91,7 @@ def parse_config(raw: dict[str, Any]) -> AgentKitConfig:
     layers_raw = raw.get("layers") or {}
     review_raw = raw.get("review") or {}
     skills_raw = raw.get("skills") or {}
+    maintainability_raw = raw.get("maintainability") or {}
 
     docs = DocsConfig(
         root=str(docs_raw.get("root", "docs")),
@@ -115,6 +133,22 @@ def parse_config(raw: dict[str, Any]) -> AgentKitConfig:
         output=str(skills_raw.get("output", "plugins/agentkit/skills/agentkit/SKILL.md")),
     )
 
+    budgets_raw = maintainability_raw.get("budgets", []) if isinstance(maintainability_raw, dict) else []
+    budgets = tuple(
+        MaintainabilityBudgetConfig(
+            name=str(value.get("name") or f"budget-{index + 1}"),
+            paths=tuple(str(item) for item in value.get("paths", []) or []),
+            max_lines=_optional_int(value.get("max_lines")),
+            max_functions=_optional_int(value.get("max_functions")),
+            max_classes=_optional_int(value.get("max_classes")),
+            mode=str(value.get("mode", "warn")),
+            guidance=str(value.get("guidance", "")),
+        )
+        for index, value in enumerate(budgets_raw)
+        if isinstance(value, dict)
+    )
+    maintainability = MaintainabilityConfig(budgets=budgets)
+
     return AgentKitConfig(
         version=int(raw.get("version", 1)),
         docs=docs,
@@ -122,6 +156,7 @@ def parse_config(raw: dict[str, Any]) -> AgentKitConfig:
         layers=layers,
         review=review,
         skills=skills,
+        maintainability=maintainability,
     )
 
 
@@ -129,3 +164,9 @@ def _optional_str(value: object) -> str | None:
     if value is None:
         return None
     return str(value)
+
+
+def _optional_int(value: object) -> int | None:
+    if value is None:
+        return None
+    return int(value)

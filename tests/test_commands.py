@@ -12,6 +12,7 @@ from agentkit.commands import (
     init_repo,
     install_hooks,
     lint_architecture,
+    lint_maintainability,
     orient,
     remind_task,
     review_guidance,
@@ -1007,6 +1008,69 @@ layers:
 
     assert code == 1
     assert "app.api" in output or "app" in output
+
+
+def test_lint_maintainability_warns_without_failing(tmp_path: Path) -> None:
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "large.py").write_text(
+        "\n".join(["def one():", "    return 1", "", "def two():", "    return 2"]) + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "agentkit.yml").write_text(
+        """
+version: 1
+docs:
+  design: docs/design.md
+components: {}
+layers: {}
+maintainability:
+  budgets:
+    - name: small-module
+      paths:
+        - src/large.py
+      max_lines: 4
+      max_functions: 1
+      max_classes: 0
+      mode: warn
+      guidance: Split the module.
+""",
+        encoding="utf-8",
+    )
+
+    code, output = lint_maintainability(tmp_path)
+
+    assert code == 0
+    assert "Maintainability Budgets" in output
+    assert "WARN src/large.py has 5 lines" in output
+    assert "WARN src/large.py has 2 functions" in output
+    assert "Split the module." in output
+
+
+def test_lint_maintainability_can_fail(tmp_path: Path) -> None:
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "large.py").write_text("class One:\n    pass\n", encoding="utf-8")
+    (tmp_path / "agentkit.yml").write_text(
+        """
+version: 1
+docs:
+  design: docs/design.md
+components: {}
+layers: {}
+maintainability:
+  budgets:
+    - name: no-classes
+      paths:
+        - src/large.py
+      max_classes: 0
+      mode: fail
+""",
+        encoding="utf-8",
+    )
+
+    code, output = lint_maintainability(tmp_path)
+
+    assert code == 1
+    assert "FAIL src/large.py has 1 classes" in output
 
 
 def test_review_guidance_uses_git_changed_paths(tmp_path: Path) -> None:

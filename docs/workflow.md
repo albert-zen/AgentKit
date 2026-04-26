@@ -374,6 +374,7 @@ Before asking the human for final review, the agent should have already handled:
 
 - obvious test failures
 - AgentKit check failures
+- maintainability budget warnings that indicate a module should be split before more behavior is added
 - stale docs warnings
 - missing review loop
 - straightforward reviewer findings

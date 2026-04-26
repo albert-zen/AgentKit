@@ -19,6 +19,7 @@ The guidance component gives the implementing agent practical next steps:
 - docs recommendation
 - design gap reporting
 - docs-impact assessment
+- maintainability budget reporting
 - review guidance
 - architecture lint orchestration
 - task lifecycle guidance
@@ -44,6 +45,7 @@ The skill should also explain command side effects and common ambiguity points:
 - `agentkit start` writes task state
 - lifecycle tasks are required for repository-changing work, not ordinary read-only exploration
 - `agentkit status` and `agentkit remind` are safe status/reminder reads
+- `agentkit lint-maintainability` checks repo-local module size and responsibility budgets
 - common `intent-guidance` change types
 - docs-only wording tasks usually do not need new product design unless they change meaning or command semantics
 - review completion is an acknowledgement, not transcript storage
@@ -108,6 +110,7 @@ Current implementation modules:
 
 - `task_state.py` reads and writes task state.
 - `receipts.py` reads and writes receipt files.
+- `maintainability.py` evaluates configured module size and responsibility budgets.
 - `lifecycle.py` evaluates task state, receipts, fingerprints, missing gates, and reminder text.
 - `watch.py` delivers reminder text in a local loop.
 

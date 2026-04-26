@@ -279,9 +279,12 @@ Run configured checks:
 - docs existence
 - docs-impact warning
 - architecture lint
+- maintainability budget checks
 - optional project commands
 
 This should be the command agents run before review.
+
+Maintainability budgets are repo-local reminders, not a replacement for formatters or language linters. Projects can configure file-level limits such as `max_lines`, `max_functions`, and `max_classes` in `agentkit.yml`; warning budgets surface pressure to split modules, while failing budgets can enforce hard boundaries when the project is ready.
 
 `check` should stay safe for Git hooks: it must remain deterministic and must not spawn reviewers or require long-running LLM judgment. It may include a lifecycle reminder section derived from `.agentkit/` task state, so an agent that only remembers to run `check` still sees missing closeout gates.
 

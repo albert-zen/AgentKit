@@ -26,6 +26,7 @@ The CLI should stay thin. It should parse arguments and delegate behavior to com
 - `agentkit remind`
 - `agentkit docs-impact`
 - `agentkit lint-architecture`
+- `agentkit lint-maintainability`
 - `agentkit check`
 - `agentkit review-guidance`
 - `agentkit close`

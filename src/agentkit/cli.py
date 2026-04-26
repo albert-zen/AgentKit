@@ -16,6 +16,7 @@ from agentkit.commands import (
     install_hooks,
     intent_guidance,
     lint_architecture,
+    lint_maintainability,
     orient,
     remind_task,
     review_guidance,
@@ -55,6 +56,7 @@ def main(argv: list[str] | None = None) -> None:
     impact_parser.add_argument("--path", action="append", default=[])
 
     subparsers.add_parser("lint-architecture")
+    subparsers.add_parser("lint-maintainability")
     subparsers.add_parser("check")
     subparsers.add_parser("doctor")
     status_parser = subparsers.add_parser("status")
@@ -117,6 +119,10 @@ def main(argv: list[str] | None = None) -> None:
             print(docs_impact(repo, paths=args.path or None))
         elif args.command == "lint-architecture":
             code, output = lint_architecture(repo)
+            print(output)
+            raise SystemExit(code)
+        elif args.command == "lint-maintainability":
+            code, output = lint_maintainability(repo)
             print(output)
             raise SystemExit(code)
         elif args.command == "check":

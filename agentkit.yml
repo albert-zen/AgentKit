@@ -50,6 +50,7 @@ components:
       - src/agentkit/render.py
       - src/agentkit/git.py
       - src/agentkit/fs.py
+      - src/agentkit/maintainability.py
       - src/agentkit/lifecycle.py
       - src/agentkit/receipts.py
       - src/agentkit/task_state.py
@@ -135,6 +136,7 @@ layers:
       - src/agentkit/render.py
       - src/agentkit/receipts.py
       - src/agentkit/task_state.py
+      - src/agentkit/maintainability.py
     may_import:
       - config
   lifecycle:
@@ -170,3 +172,25 @@ review:
 skills:
   source: plugins/agentkit/skills/agentkit/SKILL.md
   output: plugins/agentkit/skills/agentkit/SKILL.md
+
+maintainability:
+  budgets:
+    - name: commands-orchestration
+      paths:
+        - src/agentkit/commands.py
+      max_lines: 900
+      max_functions: 35
+      max_classes: 0
+      mode: warn
+      guidance: "commands.py is carrying too much orchestration surface; prefer extracting templates, maintainability lint, or guidance rendering before adding more behavior."
+    - name: focused-modules
+      paths:
+        - src/agentkit/config.py
+        - src/agentkit/cli.py
+        - src/agentkit/lifecycle.py
+        - src/agentkit/maintainability.py
+      max_lines: 350
+      max_functions: 25
+      max_classes: 8
+      mode: warn
+      guidance: "Keep focused modules small enough for future agents to scan in one pass."

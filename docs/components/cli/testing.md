@@ -30,6 +30,12 @@ Init and doctor coverage should verify:
 - `doctor` reports missing readiness items
 - `doctor` reports an initialized repo with valid mappings as ready
 
+Check command coverage should verify:
+
+- `lint-maintainability` reports configured module budgets
+- `lint-maintainability` returns non-zero only when a matching budget uses `mode: fail`
+- `check` includes maintainability budget output with the other deterministic checks
+
 Hook command coverage should verify:
 
 - `install-hooks` writes a Git `pre-commit` hook

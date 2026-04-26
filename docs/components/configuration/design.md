@@ -13,6 +13,7 @@ AgentKit's own configuration maps lifecycle modules explicitly. The current repo
 - layer dependency rules
 - review policy
 - skill source and output locations
+- maintainability budgets for repo-specific module size and responsibility limits
 
 ## Boundary
 
