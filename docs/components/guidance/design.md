@@ -38,13 +38,19 @@ Generated guidance should distinguish two audiences:
 
 The AgentKit skill should therefore explain how AgentKit helps the current task, when to run commands, when to ask for human design, and how to handle review and closeout. For Codex, that skill should be bundled through the AgentKit plugin rather than treated as a private `.codex` file. It should point to deeper docs instead of restating the full product roadmap.
 
-Root agent guidance is even smaller than the skill. The AgentKit section in `AGENTS.md` should introduce AgentKit as the maintainability harness, point to the CLI and plugin skill, and clarify that lifecycle tasks are for repository-changing work. Read-only exploration, codebase orientation, and answering questions without edits should not be forced through `start`, `check`, and `close` unless the work becomes long-running or the human asks for tracking.
+Root agent guidance is even smaller than the skill. The AgentKit section in `AGENTS.md` should introduce AgentKit as the maintainability harness, point to the CLI and plugin skill, and set a concise risk-based lifecycle boundary. Substantial changes affecting architecture, public behavior, state or data models, security boundaries, cross-component workflows, hooks or plugins, or otherwise needing durable design and review context should use the full lifecycle. Small, self-contained, low-risk changes may skip it when ownership is obvious and verification is focused. Read-only exploration, codebase orientation, and answering questions without edits do not need a lifecycle task.
+
+The guidance should say that skipped work must start or resume a task before continuing if it expands beyond its stated boundary. It should also preserve repository authority: local policy may require lifecycle tracking for every write. Updating AgentKit's default template must not rewrite an existing repository's AgentKit section automatically.
 
 The skill should also explain command side effects and common ambiguity points:
 
 - `agentkit start` writes task state
-- lifecycle tasks are required for repository-changing work, not ordinary read-only exploration
+- lifecycle tasks are required for substantial changes, not every repository write
+- small changes may skip only when they are self-contained, low risk, clearly owned, and have focused verification
+- skipped work that expands must start or resume a task before continuing
+- repository-local policy may require a stricter lifecycle boundary
 - `agentkit status` and `agentkit remind` are safe status/reminder reads
+- `agentkit check` remains useful without an open task because deterministic checks do not require an implicit lifecycle mode
 - `agentkit lint-maintainability` checks repo-local module size and responsibility budgets
 - common `intent-guidance` change types
 - docs-only wording tasks usually do not need new product design unless they change meaning or command semantics
@@ -107,6 +113,8 @@ The guidance component should provide a shared lifecycle sampler:
 - produce agent-facing reminder text
 
 `agentkit check`, `agentkit status`, `agentkit remind`, `agentkit watch`, and external adapters should all use this same sampler. `check` can show reminder output for convenience, but it should not become the only place reminder policy lives.
+
+Risk-based task entry does not change lifecycle state or receipt semantics. When no task is open, `check` should still run deterministic repository checks and may write its normal check receipt; the lifecycle reminder should remain quiet and no implicit task should be created. Once a task is started, the existing check, review, fingerprint, reminder, and closeout gates apply unchanged.
 
 Current implementation modules:
 

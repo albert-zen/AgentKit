@@ -15,7 +15,7 @@ The workflow has four stages:
 3. Task execution and checks
 4. Exception handling and feedback
 
-Only after a repository-changing AgentKit task reaches a valid closed state should the agent end that work. Read-only exploration, codebase orientation, and question-answering do not require a lifecycle task unless they become long-running or the human explicitly asks AgentKit to track them.
+Only after a started AgentKit task reaches a valid closed state should the agent end that work. Read-only exploration, codebase orientation, and question-answering do not require a lifecycle task. Small, self-contained, low-risk changes may also skip the lifecycle when ownership is obvious and verification is focused. Substantial changes use the full lifecycle.
 
 ## Workflow Summary
 
@@ -24,7 +24,7 @@ Repository setup
   -> agentkit init
   -> configure maintainability docs, links, rules, hooks, and skills
 
-Repository-changing concrete task
+Substantial concrete task
   -> human-agent discussion and/or agentkit start
   -> record task intent, todo, focus docs, code scope, and plan
   -> implement against durable intent
@@ -89,7 +89,7 @@ After initialization, `agentkit doctor` should report which maintainability surf
 
 ## 2. Task Start
 
-Task start happens for each concrete unit of repository-changing work.
+Task start happens for each concrete unit of substantial work that needs durable lifecycle context.
 
 The command is:
 
@@ -101,9 +101,11 @@ Every task should have a task todo or task statement.
 
 `start` creates or updates the task record that later gates `close`.
 
-Use `start` when the agent will edit code, documentation, configuration, hooks, generated assets, plugin files, or other repository state. Also use it for long-running investigations that the human wants tracked through AgentKit.
+Use `start` for substantial changes that affect architecture, public behavior, state or data models, security boundaries, cross-component workflows, hooks or plugins, or otherwise need durable design and review context. Also use it for long-running investigations that the human wants tracked through AgentKit.
 
-Do not require `start` for read-only exploration, codebase orientation, answering questions, or lightweight audits that do not modify repository state. Those activities can read the docs directly and may use `agentkit status` or `agentkit remind` to inspect an existing open task. If a read-only activity turns into implementation or docs changes, the agent should run `agentkit start` before editing.
+Do not require `start` for read-only exploration, codebase orientation, answering questions, or lightweight audits that do not modify repository state. Those activities can read the docs directly and may use `agentkit status` or `agentkit remind` to inspect an existing open task.
+
+Small, self-contained, low-risk edits may skip the lifecycle when ownership is obvious and verification is focused. Examples include a local launcher fallback, test-only maintenance, narrowly scoped wording that does not change product meaning, or a similarly reversible one-owner fix. If skipped work expands beyond its stated boundary, the agent must start or resume a task before continuing. Repository-local policy may be stricter and require the lifecycle for every write.
 
 The task record should capture:
 
@@ -173,6 +175,8 @@ Commands can use this same sampling model in different ways:
 - `agentkit watch` should repeatedly sample the state and deliver reminders while it is running.
 
 The important product rule is that reminders are derived from durable state, not from chat memory. If the task reaches a valid completed or blocked state, reminders stop. If the task is open and closeout gates are missing, reminders continue until the agent either completes the gates or records a legitimate blocked fallback.
+
+Without an open task, `agentkit check` still provides deterministic repository verification and reports a quiet no-task lifecycle reminder. It does not create an implicit task. This is sufficient AgentKit-level verification for a qualifying small edit, alongside focused project tests.
 
 ## 3. Task Execution And Checks
 

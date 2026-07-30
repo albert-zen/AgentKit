@@ -12,8 +12,13 @@ Skill content tests should verify that the bundled skill teaches:
 
 - why AgentKit exists for the current repo
 - the skill and plugin descriptions emphasize human intent, maintainability, durable intent files, and persistence of meaningful design/docs/test changes
-- when to run `agentkit start` for repository-changing work
-- when not to start a task for read-only exploration or question-answering
+- when substantial changes require `agentkit start`
+- when read-only work needs no lifecycle task
+- when small, self-contained, low-risk edits may skip lifecycle
+- examples that distinguish small work from substantial work
+- the requirement to start or resume before continuing when skipped work expands
+- repository-local authority to require a stricter policy
+- the usefulness of `agentkit check` without an open task
 - when to ask the human for missing design
 - how to run `check`, `status`, `remind`, and `watch`
 - how to request clean-context review

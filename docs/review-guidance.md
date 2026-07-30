@@ -37,7 +37,7 @@ Examples:
 - bug fixes with broad blast radius
 - changes where the implementing agent made important assumptions
 
-Review can be skipped for low-risk changes if the implementing agent records why. A skip reason is an explicit closeout fallback: it may satisfy the review gate when the agent can explain why a full clean-context review would add little value for the current diff.
+Review can be skipped for low-risk changes. If the work has entered the AgentKit lifecycle, the implementing agent records why; that skip reason is an explicit closeout fallback that may satisfy the review gate when a full clean-context review would add little value for the current diff. A small change that qualifies to skip the lifecycle does not need an AgentKit review receipt or implicit task solely to record a skip, unless repository-local policy requires one.
 
 Examples:
 

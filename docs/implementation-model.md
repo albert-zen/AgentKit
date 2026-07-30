@@ -61,6 +61,8 @@ Outputs:
 
 When writing `AGENTS.md`, `init` should create or append a concise low-level AgentKit section. The section should introduce AgentKit as the repo-local maintainability harness and point to the command entry points plus the AgentKit plugin skill. It should not duplicate the plugin skill.
 
+The generated section should state the default risk-based lifecycle boundary, while allowing repository-local guidance to require stricter tracking. Re-running `init` should remain idempotent and should not automatically replace an existing marked AgentKit section with newer default wording.
+
 `init` should also guide the agent to configure the repository's maintainability system:
 
 - docs root and durable intent locations
@@ -118,7 +120,9 @@ Side effect:
 
 `start` should reuse the same component and docs analysis as `orient`, but it persists enough state for `close` to evaluate whether the task was responsibly finished.
 
-The lifecycle should be scoped to repository-changing work. Agents should run `start` for code edits, documentation edits, configuration changes, generated files, hook/plugin changes, commits, and long-running investigations the human wants tracked. They should not be required to start a task for read-only codebase orientation, lightweight audits, or answering questions without edits; if that exploration turns into repository changes, the agent should start or resume a task before editing.
+The lifecycle should be scoped by risk. Agents should run `start` for substantial changes affecting architecture, public behavior, state or data models, security boundaries, cross-component workflows, hooks or plugins, or otherwise needing durable design and review context. They should not start a task for read-only codebase orientation, lightweight audits, or answering questions without edits.
+
+Small, self-contained, low-risk edits may skip the lifecycle when ownership is obvious and verification is focused. If skipped work expands beyond its stated boundary, the agent should start or resume a task before continuing. Repository-local policy may require a stricter boundary, including lifecycle tracking for every write.
 
 The agent may run `start` after a design discussion, or run it earlier and later update the task context once the human-agent discussion clarifies the focus.
 
@@ -294,6 +298,8 @@ An empty `maintainability.budgets` list means there are no budget checks to run.
 When budgets are configured and passing, `check` should summarize them with a compact count instead of listing every matched file. Detailed inventory belongs in `agentkit lint-maintainability`; `check` should expand maintainability output only for warnings or failures that need action.
 
 `check` should stay safe for Git hooks: it must remain deterministic and must not spawn reviewers or require long-running LLM judgment. It may include a lifecycle reminder section derived from `.agentkit/` task state, so an agent that only remembers to run `check` still sees missing closeout gates.
+
+`check` remains useful when no lifecycle task is open: it runs the same deterministic repository checks, may write its normal diff-keyed check receipt, and reports that no task is open. It should not create an implicit task or alternate lifecycle mode. This existing behavior is sufficient for focused verification of a qualifying small edit.
 
 `check` should not be the only owner of reminder logic. The underlying status/reminder engine should be callable by `status`, `remind`, `watch`, and external adapters.
 

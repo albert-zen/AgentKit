@@ -250,6 +250,10 @@ AgentKit provides:
 
 AgentKit should treat agent work as an explicit task lifecycle.
 
+The default lifecycle boundary should be proportional to change risk. Substantial changes that affect architecture, public behavior, state or data models, security boundaries, cross-component workflows, hooks or plugins, or otherwise need durable design and review context should use the full lifecycle. Read-only work does not need a task. Small, self-contained, low-risk changes may skip the lifecycle when ownership is obvious and verification is focused; if that work expands, the agent must start or resume a task before continuing. A repository may choose a stricter policy, including requiring lifecycle tracking for every write.
+
+This boundary controls whether a task is opened; it does not create a second task mode or weaken the state machine after `start`. Existing repositories retain their checked-in local guidance until an owner deliberately updates it.
+
 ### 0. Repository Initialization
 
 At repository setup time, the agent runs `agentkit init`.
