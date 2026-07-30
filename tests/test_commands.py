@@ -21,6 +21,7 @@ from agentkit.commands import (
 )
 from agentkit.cli import _normalize_global_repo_arg
 from agentkit.git import changed_paths, diff_fingerprint, git_path
+from agentkit.templates import AGENTKIT_AGENT_SECTION_MARKER, DEFAULT_SKILL_MD
 from agentkit.watch import watch_task
 
 
@@ -40,10 +41,46 @@ def test_init_creates_small_agentkit_agents_section(tmp_path: Path) -> None:
 
     agents = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
     assert "### AgentKit" in agents
-    assert "keep agent-led changes tied to durable intent" in agents
+    assert "substantial agent-led changes" in agents
+    assert "architecture, public behavior, state or data models, security boundaries" in agents
+    assert "Small, self-contained, low-risk edits may skip" in agents
+    assert "ownership is obvious and verification is focused" in agents
+    assert "If initially small work expands" in agents
     assert "agentkit start --task" in agents
-    assert "read-only exploration" in agents
+    assert "read-only work does not need a lifecycle task" in agents
+    assert "A repository may require a stricter policy" in agents
     assert "Before changing code" not in agents
+    assert len(agents.splitlines()) <= 6
+    assert len(agents.split()) < 130
+
+
+def test_init_is_idempotent(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    agents_before = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+    skill_before = (tmp_path / "plugins" / "agentkit" / "skills" / "agentkit" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
+
+    output = init_repo(tmp_path)
+
+    assert "No files changed" in output
+    assert (tmp_path / "AGENTS.md").read_text(encoding="utf-8") == agents_before
+    assert (
+        tmp_path / "plugins" / "agentkit" / "skills" / "agentkit" / "SKILL.md"
+    ).read_text(encoding="utf-8") == skill_before
+
+
+def test_init_does_not_rewrite_existing_agentkit_policy(tmp_path: Path) -> None:
+    agents = (
+        "### AgentKit\n\n"
+        f"{AGENTKIT_AGENT_SECTION_MARKER}\n"
+        "This repository requires the full lifecycle for every write.\n"
+    )
+    (tmp_path / "AGENTS.md").write_text(agents, encoding="utf-8")
+
+    init_repo(tmp_path)
+
+    assert (tmp_path / "AGENTS.md").read_text(encoding="utf-8") == agents
 
 
 def test_init_appends_agentkit_section_to_existing_agents(tmp_path: Path) -> None:
@@ -184,6 +221,28 @@ def test_doctor_reports_ready_initialized_repo(tmp_path: Path) -> None:
     assert "canonical AgentKit skill source exists" in output
     assert "No maintainability budgets configured" in output
     assert "Codex watchdog hook missing" in output
+
+
+def test_doctor_accepts_stricter_repository_lifecycle_policy(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    (tmp_path / "AGENTS.md").write_text(
+        "### AgentKit\n\n"
+        f"{AGENTKIT_AGENT_SECTION_MARKER}\n"
+        "Local policy requires AgentKit lifecycle tracking for every write.\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "example.py").write_text("VALUE = 1\n", encoding="utf-8")
+    generate_skill(tmp_path)
+
+    code, output = doctor(tmp_path)
+    second_code, second_output = doctor(tmp_path)
+
+    assert code == 0
+    assert (second_code, second_output) == (code, output)
+    assert "AGENTS.md contains AgentKit entry guidance" in output
+    assert "substantial agent-led changes" not in output
+    assert len(output.splitlines()) < 30
 
 
 def test_doctor_reports_installed_codex_watchdog(tmp_path: Path) -> None:
@@ -451,6 +510,21 @@ def test_check_includes_lifecycle_reminder_and_writes_receipt(tmp_path: Path) ->
     assert "Preserve what humans have already decided" in output
     assert "Run the review loop" in output
     assert "missing check receipt" not in output
+    receipt = tmp_path / ".agentkit" / "receipts" / "checks" / f"{diff_fingerprint(tmp_path)}.json"
+    assert receipt.exists()
+
+
+def test_check_without_task_runs_checks_without_creating_implicit_task(tmp_path: Path) -> None:
+    init_repo(tmp_path)
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "example.py").write_text("VALUE = 1\n", encoding="utf-8")
+
+    code, output = check(tmp_path)
+
+    assert code == 0
+    assert "Manifest\nOK" in output
+    assert "No reminder needed. No AgentKit task is open." in output
+    assert not (tmp_path / ".agentkit" / "tasks" / "current.json").exists()
     receipt = tmp_path / ".agentkit" / "receipts" / "checks" / f"{diff_fingerprint(tmp_path)}.json"
     assert receipt.exists()
 
@@ -874,7 +948,16 @@ def test_generate_skill_includes_lifecycle_commands(tmp_path: Path) -> None:
     assert "Preserve human intent and project maintainability" in skill
     assert "persist meaningful design, docs, and test changes" in skill
     assert "When To Start A Task" in skill
-    assert "Repository-Changing Operating Loop" in skill
+    assert "substantial changes that affect architecture, public behavior" in skill
+    assert "Small, self-contained, low-risk edits may also skip" in skill
+    assert "ownership is obvious and verification is focused" in skill
+    assert "a local launcher fallback" in skill
+    assert "test-only maintenance" in skill
+    assert "narrowly scoped wording that does not change product meaning" in skill
+    assert "reversible, one-owner fix" in skill
+    assert "If skipped work expands beyond its stated boundary" in skill
+    assert "Repository-local policy may be stricter" in skill
+    assert "Lifecycle Operating Loop" in skill
     assert "read-only exploration" in skill
     assert "ask the human" in skill
     assert "start` writes repository-local task state" in skill
@@ -884,8 +967,19 @@ def test_generate_skill_includes_lifecycle_commands(tmp_path: Path) -> None:
     assert "agentkit status" in skill
     assert "agentkit remind" in skill
     assert "agentkit install-codex-watchdog --repo-local" in skill
+    assert "remains useful without an open lifecycle task" in skill
+    assert "without creating an implicit task" in skill
     assert "review loop was completed" in skill
     assert "agentkit close" in skill
+
+
+def test_checked_in_skill_matches_default_template() -> None:
+    repo = Path(__file__).resolve().parents[1]
+    checked_in_skill = (repo / "plugins" / "agentkit" / "skills" / "agentkit" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert checked_in_skill == DEFAULT_SKILL_MD
 
 
 def test_orient_task_matching_ignores_common_words(tmp_path: Path) -> None:

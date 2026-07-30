@@ -13,7 +13,11 @@ The canonical Codex-facing package lives under `plugins/agentkit/`:
 
 The skill remains an operating guide for agents using AgentKit. It should explain the task loop, command side effects, design-gap behavior, review expectations, lifecycle reminders, and closeout. It should not become the north-star product design for agents developing AgentKit itself.
 
-The skill should also make the lifecycle boundary explicit. Agents should use `agentkit start`, `check`, review guidance, and `close` for repository-changing work such as code edits, docs edits, generated files, hooks, plugin changes, commits, or long-running tracked investigations. Agents should not start a task for read-only exploration, codebase orientation, or answering questions unless that work turns into a repository change or the human explicitly asks for AgentKit tracking.
+The skill should also make the risk-based lifecycle boundary explicit. Agents should use `agentkit start`, `check`, review guidance, and `close` for substantial changes affecting architecture, public behavior, state or data models, security boundaries, cross-component workflows, hooks or plugins, or otherwise needing durable design and review context. Agents should not start a task for read-only exploration, codebase orientation, or answering questions.
+
+Small, self-contained, low-risk edits may skip the lifecycle when ownership is obvious and verification is focused. The skill should give representative examples such as a local launcher fallback, test-only maintenance, narrowly scoped wording that preserves product meaning, or a similarly reversible one-owner fix. If skipped work expands beyond its stated boundary, the agent must start or resume a task before continuing. Repository-local instructions remain authoritative and may require the lifecycle for every write.
+
+`agentkit check` should be presented as useful focused verification even when no task is open. It runs deterministic repository checks without creating a second implicit task mode; once a task is started, normal lifecycle and receipt semantics apply.
 
 The skill and plugin descriptions should present AgentKit's product role consistently: preserving human intent and project maintainability by guiding agents to read durable intent files and persist meaningful design, documentation, and test changes. The description should not make AgentKit sound primarily like a generic check runner or lifecycle ceremony tool.
 

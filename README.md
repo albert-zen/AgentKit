@@ -27,7 +27,7 @@ In a repository that should use AgentKit:
 agentkit init
 ```
 
-For each agent-led task:
+Use the full lifecycle for substantial agent-led changes:
 
 ```bash
 agentkit start --task "Describe the task"
@@ -35,6 +35,8 @@ agentkit check
 agentkit review-guidance
 agentkit close --review-complete
 ```
+
+Read-only work needs no lifecycle task. Small, self-contained, low-risk edits may skip it when ownership is obvious and verification is focused, unless repository-local guidance requires a stricter policy. If initially small work expands, start or resume the task before continuing.
 
 Useful lifecycle commands:
 
