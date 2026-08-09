@@ -94,12 +94,13 @@ Repository-local policy may be stricter and require the lifecycle for every writ
 
 1. Start or resume the task with `agentkit start`.
 2. Read the durable intent sources in the output.
-3. If design is missing or ambiguous for product behavior, API, data model, workflow, architecture, or state transitions, ask the human before implementing that part.
-4. Implement against tests and the repo's architecture rules.
-5. Run `agentkit check` and read any lifecycle reminder it prints.
-6. Run `agentkit review-guidance` and request clean-context review when expected.
-7. Fix meaningful reviewer findings.
-8. Run `agentkit close --review-complete`, or close as blocked with a recorded human question.
+3. Refine task context with `agentkit update` when later discussion changes the task, plan, focus, or components.
+4. If design is missing or ambiguous for product behavior, API, data model, workflow, architecture, or state transitions, ask the human before implementing that part.
+5. Implement against tests and the repo's architecture rules.
+6. Run `agentkit check` and read any lifecycle reminder it prints.
+7. Run `agentkit review-guidance` and request clean-context review when expected.
+8. Fix meaningful reviewer findings.
+9. Run `agentkit close --review-complete`, or close as blocked with a recorded human question.
 
 ## Start Of Task
 
@@ -117,11 +118,17 @@ If you know the component, run:
 agentkit start --component <name>
 ```
 
-After discussion clarifies the task, preserve the focus:
+After discussion clarifies an already-started task, preserve the refined
+context without resetting start-time state:
 
 ```text
-agentkit start --task "<refined task>" --focus-note "<human-approved focus>" --focus-doc <path>
+agentkit update --set-task "<refined task>" --set-plan "<plan>" \\
+  --add-focus-note "<human-approved focus>" --add-focus-doc <path>
 ```
+
+`update` supports set semantics for task/plan and duplicate-safe add/remove
+semantics for focus notes, focus docs, and components. It cannot update
+lifecycle status, fingerprints, or validation evidence.
 
 Use `agentkit start --component <name>` when you already know the component. Otherwise, include the task text and let AgentKit infer affected components.
 

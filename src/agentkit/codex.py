@@ -51,7 +51,7 @@ def codex_stop_hook(repo: Path, payload_text: str, log_path: str | None = None) 
     sample = sample_lifecycle(hook_repo)
     if log_path:
         append_codex_stop_log(hook_repo, log_path, sample.state)
-    if sample.state not in {"needs_work", "ready_to_close"}:
+    if not sample.reminder_needed:
         return (0, "")
     reminder = render_reminder(sample)
     reason = (

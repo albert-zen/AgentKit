@@ -13,6 +13,12 @@ The canonical Codex-facing package lives under `plugins/agentkit/`:
 
 The skill remains an operating guide for agents using AgentKit. It should explain the task loop, command side effects, design-gap behavior, review expectations, lifecycle reminders, and closeout. It should not become the north-star product design for agents developing AgentKit itself.
 
+The task loop distinguishes `start` from `update`. `start` establishes initial
+lifecycle context; after later discussion, the skill directs agents to
+`agentkit update` for explicit task/plan replacement and duplicate-safe
+focus/component additions or removals. The skill must state that update cannot
+change lifecycle status, fingerprints, or validation evidence.
+
 The skill should also make the risk-based lifecycle boundary explicit. Agents should use `agentkit start`, `check`, review guidance, and `close` for substantial changes affecting architecture, public behavior, state or data models, security boundaries, cross-component workflows, hooks or plugins, or otherwise needing durable design and review context. Agents should not start a task for read-only exploration, codebase orientation, or answering questions.
 
 Small, self-contained, low-risk edits may skip the lifecycle when ownership is obvious and verification is focused. The skill should give representative examples such as a local launcher fallback, test-only maintenance, narrowly scoped wording that preserves product meaning, or a similarly reversible one-owner fix. If skipped work expands beyond its stated boundary, the agent must start or resume a task before continuing. Repository-local instructions remain authoritative and may require the lifecycle for every write.

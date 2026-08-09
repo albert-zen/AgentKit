@@ -29,8 +29,11 @@ components:
     description: agentkit.yml schema and configuration parsing.
     code:
       - src/agentkit/config.py
+      - src/agentkit/policy.py
+      - src/agentkit/presets.py
       - agentkit.yml
       - tests/test_config.py
+      - tests/test_presets.py
     docs:
       - docs/components/configuration/design.md
       - docs/components/configuration/schema.md
@@ -55,10 +58,14 @@ components:
       - src/agentkit/maintainability.py
       - src/agentkit/codex.py
       - src/agentkit/lifecycle.py
+      - src/agentkit/rules.py
       - src/agentkit/receipts.py
       - src/agentkit/task_state.py
       - src/agentkit/watch.py
       - tests/test_commands.py
+      - tests/test_lifecycle_characterization.py
+      - tests/test_rules.py
+      - tests/test_task_state.py
     docs:
       - docs/components/guidance/design.md
       - docs/components/guidance/testing.md
@@ -131,6 +138,8 @@ layers:
   config:
     paths:
       - src/agentkit/config.py
+      - src/agentkit/policy.py
+      - src/agentkit/presets.py
     may_import: []
   utilities:
     paths:
@@ -147,9 +156,11 @@ layers:
   lifecycle:
     paths:
       - src/agentkit/lifecycle.py
+      - src/agentkit/rules.py
       - src/agentkit/watch.py
       - src/agentkit/codex.py
     may_import:
+      - config
       - utilities
   commands:
     paths:
@@ -198,8 +209,37 @@ maintainability:
         - src/agentkit/templates.py
         - src/agentkit/architecture.py
         - src/agentkit/codex.py
+        - src/agentkit/policy.py
+        - src/agentkit/presets.py
+        - src/agentkit/rules.py
+        - src/agentkit/task_state.py
       max_lines: 350
       max_functions: 25
       max_classes: 8
       mode: warn
       guidance: "Keep focused modules small enough for future agents to scan in one pass."
+
+preset:
+  source: agentkit
+  name: recommended-v1
+  version: 1
+
+rules:
+  working_tree_clean:
+    enabled: true
+    severity: error
+  check_receipt_current:
+    enabled: true
+    severity: error
+  review_addressed:
+    enabled: true
+    severity: error
+    allow_skip: true
+  blocked_question_recorded:
+    enabled: true
+    severity: error
+
+reminders:
+  open_task: true
+  ready_to_close: true
+  stale_terminal: true

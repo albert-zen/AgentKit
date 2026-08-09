@@ -27,10 +27,18 @@ In a repository that should use AgentKit:
 agentkit init
 ```
 
+To import the versioned recommended lifecycle policy as explicit, auditable
+repository configuration:
+
+```bash
+agentkit init --preset recommended-v1
+```
+
 Use the full lifecycle for substantial agent-led changes:
 
 ```bash
 agentkit start --task "Describe the task"
+agentkit update --set-plan "Implementation plan" --add-focus-doc docs/design.md
 agentkit check
 agentkit review-guidance
 agentkit close --review-complete
@@ -40,6 +48,7 @@ Read-only work needs no lifecycle task. Small, self-contained, low-risk edits ma
 
 Useful lifecycle commands:
 
+- `agentkit update`: refine explicit task context without resetting unrelated state or evidence.
 - `agentkit status`: show task state and missing closeout gates.
 - `agentkit remind`: print the next reminder from current task state.
 - `agentkit watch`: run a local reminder loop.
@@ -62,6 +71,10 @@ The concrete implementation model lives in [docs/implementation-model.md](docs/i
 The clean-context review guidance contract lives in [docs/review-guidance.md](docs/review-guidance.md).
 
 The product roadmap lives in [docs/roadmap.md](docs/roadmap.md).
+
+The Association / State / Rule implementation boundary lives in
+[docs/architecture/core-model.md](docs/architecture/core-model.md), governed by
+[ADR 0001](docs/decisions/0001-association-state-rule-core.md).
 
 ## License
 

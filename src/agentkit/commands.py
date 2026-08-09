@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import yaml
+
 from agentkit.architecture import lint_architecture
 from agentkit.codex import (
     codex_hooks_feature_enabled,
@@ -11,14 +13,16 @@ from agentkit.codex import (
     has_codex_watchdog_hook,
     install_codex_watchdog,
 )
-from agentkit.config import AgentKitConfig, ComponentConfig, LayerConfig, load_config
+from agentkit.config import AgentKitConfig, ComponentConfig, LayerConfig, load_config, parse_config
 from agentkit.fs import expand_patterns, matches_any, relpath
 from agentkit.git import changed_paths, diff_fingerprint, git_path, is_git_repo
 from agentkit.lifecycle import reminder_text, status_text
 from agentkit.maintainability import lint_maintainability
-from agentkit.receipts import has_receipt, write_receipt
+from agentkit.receipts import write_receipt
 from agentkit.render import bullet, section
-from agentkit.task_state import DEFAULT_TASK_ID, load_task_state, task_path, write_task_state
+from agentkit.rules import RuleResult, evaluate_lifecycle
+from agentkit.task_state import DEFAULT_TASK_ID, TaskState, load_task_state, task_path, write_task_state
+from agentkit.presets import materialize_preset_text
 from agentkit.templates import (
     AGENTKIT_AGENT_SECTION,
     AGENTKIT_AGENT_SECTION_MARKER,
@@ -62,10 +66,29 @@ INTENT_SYSTEM_REMINDER = [
 ]
 
 
-def init_repo(repo: Path, force: bool = False) -> str:
+def init_repo(repo: Path, force: bool = False, preset: str | None = None) -> str:
     created: list[str] = []
+    config_path = repo / "agentkit.yml"
+    preset_content: str | None = None
+    if preset:
+        source_text = (
+            config_path.read_text(encoding="utf-8")
+            if config_path.exists() and not force
+            else DEFAULT_AGENTKIT_YML
+        )
+        preset_content = materialize_preset_text(source_text, preset)
+        raw = yaml.safe_load(preset_content) or {}
+        if not isinstance(raw, dict):
+            raise ValueError(f"AgentKit config must be a mapping: {config_path}")
+        parse_config(raw)
+
     _ensure_agentkit_agents_section(_agents_path(repo), created, force)
-    _write_if_missing(repo / "agentkit.yml", DEFAULT_AGENTKIT_YML, created, force)
+    if preset_content is not None:
+        if not config_path.exists() or config_path.read_text(encoding="utf-8") != preset_content:
+            config_path.write_text(preset_content, encoding="utf-8")
+            created.append(relpath(config_path, repo))
+    else:
+        _write_if_missing(config_path, DEFAULT_AGENTKIT_YML, created, force)
     for directory in [
         repo / "docs",
         repo / "docs" / "architecture",
@@ -216,21 +239,21 @@ def start_task(
     checks = suggested_checks(config, components)
     review_expected = _review_expected(config, components, task or "")
     task_id = DEFAULT_TASK_ID
-    state = {
-        "task_id": task_id,
-        "status": "open",
-        "task": task or "",
-        "plan": plan or "",
-        "focus_notes": focus_notes or [],
-        "focus_docs": explicit_focus_docs,
-        "components": [component.name for component in components],
-        "durable_intent_sources": docs,
-        "changed_paths": changed,
-        "design_gaps": gaps,
-        "suggested_checks": checks,
-        "review_expected": review_expected,
-        "diff_fingerprint": diff_fingerprint(repo),
-    }
+    state = TaskState(
+        task_id=task_id,
+        status="open",
+        task=task or "",
+        plan=plan or "",
+        focus_notes=tuple(focus_notes or []),
+        focus_docs=tuple(explicit_focus_docs),
+        components=tuple(component.name for component in components),
+        durable_intent_sources=tuple(docs),
+        changed_paths=tuple(changed),
+        design_gaps=tuple(gaps),
+        suggested_checks=tuple(checks),
+        review_expected=review_expected,
+        diff_fingerprint=diff_fingerprint(repo),
+    )
     write_task_state(repo, state, task_id)
     return "\n\n".join(
         [
@@ -246,6 +269,52 @@ def start_task(
     )
 
 
+def update_task(
+    repo: Path,
+    task_id: str | None = None,
+    set_task: str | None = None,
+    set_plan: str | None = None,
+    add_focus_notes: list[str] | None = None,
+    remove_focus_notes: list[str] | None = None,
+    add_focus_docs: list[str] | None = None,
+    remove_focus_docs: list[str] | None = None,
+    add_components: list[str] | None = None,
+    remove_components: list[str] | None = None,
+) -> str:
+    task_name = task_id or DEFAULT_TASK_ID
+    state = load_task_state(repo, task_name)
+    if state is None:
+        raise ValueError("No task state exists. Run `agentkit start` before `agentkit update`.")
+
+    changes: dict[str, object] = {}
+    if set_task is not None:
+        changes["task"] = set_task
+    if set_plan is not None:
+        changes["plan"] = set_plan
+    changes["focus_notes"] = _update_values(
+        state.focus_notes, add_focus_notes or [], remove_focus_notes or []
+    )
+    changes["focus_docs"] = _update_values(
+        state.focus_docs, add_focus_docs or [], remove_focus_docs or []
+    )
+    changes["components"] = _update_values(
+        state.components, add_components or [], remove_components or []
+    )
+    updated = state.with_changes(**changes)
+    write_task_state(repo, updated, task_name)
+    return "\n\n".join(
+        [
+            section("Task Updated", [task_name]),
+            section("Task", [updated.task or "none"]),
+            section("Plan", [updated.plan or "none"]),
+            section("Focus Notes", bullet(updated.focus_notes)),
+            section("Focus Docs", bullet(updated.focus_docs)),
+            section("Components", bullet(updated.components)),
+            section("Lifecycle State Preserved", [updated.status]),
+        ]
+    )
+
+
 def close_task(
     repo: Path,
     task_id: str | None = None,
@@ -255,10 +324,10 @@ def close_task(
 ) -> tuple[int, str]:
     task_name = task_id or DEFAULT_TASK_ID
     path = task_path(repo, task_name)
-    state = load_task_state(repo, task_name) or {}
+    state = load_task_state(repo, task_name)
     current_changes = changed_paths(repo) if is_git_repo(repo) else []
     current_fingerprint = diff_fingerprint(repo)
-    if not path.exists():
+    if not path.exists() or state is None:
         return (
             1,
             "\n\n".join(
@@ -268,17 +337,24 @@ def close_task(
                 ]
             ),
         )
-    if blocked_question:
-        state.update(
-            {
-                "task_id": task_name,
-                "status": "blocked",
-                "blocked_question": blocked_question,
-                "open_changes": current_changes,
-                "diff_fingerprint": current_fingerprint,
-            }
+    if blocked_question is not None:
+        evaluation = evaluate_lifecycle(
+            repo,
+            task_name,
+            transition="blocked",
+            blocked_question=blocked_question,
+            task_state=state,
         )
-        write_task_state(repo, state, task_name)
+        if evaluation.blocking_failures:
+            return (1, _close_failure(evaluation.blocking_failures[0], current_changes))
+        blocked_state = state.with_changes(
+            task_id=task_name,
+            status="blocked",
+            blocked_question=blocked_question,
+            open_changes=tuple(current_changes),
+            diff_fingerprint=current_fingerprint,
+        )
+        write_task_state(repo, blocked_state, task_name)
         return (
             0,
             "\n\n".join(
@@ -289,62 +365,65 @@ def close_task(
                 ]
             ),
         )
-    if current_changes:
-        return (
-            1,
-            "\n\n".join(
-                [
-                    section("Close Status", ["needs_work"]),
-                    section("Open Changes", bullet(current_changes)),
-                    section(
-                        "Required Action",
-                        [
-                            "Commit or intentionally stage/handoff the changes according to local policy.",
-                            "If blocked on human input, run `agentkit close --blocked-question \"...\"`.",
-                        ],
-                    ),
-                ]
-            ),
-        )
-    if not has_receipt(repo, "checks", current_fingerprint):
-        return (
-            1,
-            "\n\n".join(
-                [
-                    section("Close Status", ["needs_work"]),
-                    section("Missing Check Receipt", ["Run `agentkit check` for the current diff before closing."]),
-                ]
-            ),
-        )
-    if review_complete:
-        state["review_complete"] = True
-        state["review_fingerprint"] = current_fingerprint
-    if skip_review_reason:
-        state["skip_review_reason"] = skip_review_reason
-        state["skip_review_fingerprint"] = current_fingerprint
-    has_current_review = state.get("review_complete") and state.get("review_fingerprint") == current_fingerprint
-    has_current_skip = state.get("skip_review_reason") and state.get("skip_review_fingerprint") == current_fingerprint
-    if state.get("review_expected") and not has_current_review and not has_current_skip:
-        write_task_state(repo, state, task_name)
-        return (
-            1,
-            "\n\n".join(
-                [
-                    section("Close Status", ["needs_work"]),
-                    section(
-                        "Missing Review Receipt",
-                        ["Pass `--review-complete` after review loop, or `--skip-review-reason \"...\"` for low-risk work."],
-                    ),
-                ]
-            ),
-        )
-    close_status = "completed"
-    state.update({"task_id": task_name, "status": close_status, "diff_fingerprint": current_fingerprint})
-    write_task_state(repo, state, task_name)
-    parts = [section("Close Status", [close_status])]
+    evaluation = evaluate_lifecycle(
+        repo,
+        task_name,
+        transition="complete",
+        review_complete=review_complete,
+        skip_review_reason=skip_review_reason,
+        task_state=state,
+    )
+    if evaluation.blocking_failures:
+        return (1, _close_failure(evaluation.blocking_failures[0], current_changes))
+
+    completed_state = state.with_changes(
+        task_id=task_name,
+        status="completed",
+        diff_fingerprint=current_fingerprint,
+        review_complete=state.review_complete or review_complete,
+        review_fingerprint=current_fingerprint if review_complete else state.review_fingerprint,
+        skip_review_reason=skip_review_reason if skip_review_reason is not None else state.skip_review_reason,
+        skip_review_fingerprint=(
+            current_fingerprint if skip_review_reason is not None else state.skip_review_fingerprint
+        ),
+    )
+    write_task_state(repo, completed_state, task_name)
+    parts = [section("Close Status", ["completed"])]
+    has_current_skip = (
+        completed_state.skip_review_reason
+        and completed_state.skip_review_fingerprint == current_fingerprint
+    )
     if has_current_skip:
-        parts.append(section("Review Skipped", [str(state["skip_review_reason"])]))
+        parts.append(section("Review Skipped", [str(completed_state.skip_review_reason)]))
     return (0, "\n\n".join(parts))
+
+
+def _close_failure(result: RuleResult, current_changes: list[str]) -> str:
+    if result.rule_id == "working_tree_clean":
+        return "\n\n".join(
+            [
+                section("Close Status", ["needs_work"]),
+                section("Open Changes", bullet(current_changes)),
+                section(
+                    "Required Action",
+                    [
+                        "Commit or intentionally stage/handoff the changes according to local policy.",
+                        "If blocked on human input, run `agentkit close --blocked-question \"...\"`.",
+                    ],
+                ),
+            ]
+        )
+    headings = {
+        "check_receipt_current": "Missing Check Receipt",
+        "review_addressed": "Missing Review Receipt",
+        "blocked_question_recorded": "Missing Blocked Human Question",
+    }
+    return "\n\n".join(
+        [
+            section("Close Status", ["needs_work"]),
+            section(headings[result.rule_id], [result.next_action or result.reason]),
+        ]
+    )
 
 
 def install_hooks(repo: Path, force: bool = False) -> str:
@@ -736,6 +815,15 @@ def _is_agentkit_marketplace_entry(item: dict[str, object]) -> bool:
 
 def _component_label(component: ComponentConfig) -> str:
     return f"{component.name}: {component.description}" if component.description else component.name
+
+
+def _update_values(current: tuple[str, ...], additions: list[str], removals: list[str]) -> tuple[str, ...]:
+    removed = set(removals)
+    values = [item for item in current if item not in removed]
+    for item in additions:
+        if item not in values:
+            values.append(item)
+    return tuple(values)
 
 
 def _pattern_has_match(repo: Path, pattern: str) -> bool:

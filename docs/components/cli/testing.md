@@ -15,6 +15,7 @@ Lifecycle command coverage should verify:
 
 - `start` writes task state and reports durable intent sources
 - `start` records focus notes and focus docs
+- `update` routes set/add/remove arguments and preserves unrelated task state
 - `status` reports open tasks, missing gates, stale receipts, and blocked questions
 - `remind` reports the next action derived from the same lifecycle state as `status`
 - `check` can include lifecycle reminders without mutating task state beyond its normal check receipt
@@ -27,6 +28,8 @@ Init and doctor coverage should verify:
 
 - `init` creates a small AgentKit section when no agent instruction file exists
 - `init` appends the small section to an existing `AGENTS.md` or `agents.md`
+- `init --preset recommended-v1` materializes inspectable policy and provenance
+- unknown presets fail clearly
 - `doctor` reports missing readiness items
 - `doctor` reports an initialized repo with valid mappings as ready
 

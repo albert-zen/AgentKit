@@ -99,7 +99,8 @@ agentkit start --task "<task todo>"
 
 Every task should have a task todo or task statement.
 
-`start` creates or updates the task record that later gates `close`.
+`start` creates or resumes lifecycle tracking and establishes the task context
+that later gates `close`.
 
 Use `start` for substantial changes that affect architecture, public behavior, state or data models, security boundaries, cross-component workflows, hooks or plugins, or otherwise need durable design and review context. Also use it for long-running investigations that the human wants tracked through AgentKit.
 
@@ -137,13 +138,22 @@ The agent runs `agentkit start` early with the initial task todo.
 
 After discussion or investigation clarifies the task, the agent updates the task context.
 
-The current path is to rerun `agentkit start` for the current task with the refined task todo, plan, focus docs, and focus notes. The CLI uses the default `current` task id and supports explicit focus arguments such as:
+Use `agentkit update` for later refinement so start-time context and lifecycle
+evidence are not reset. The CLI uses the default `current` task id and supports
+domain-level update arguments such as:
 
 ```text
-agentkit start --task "<refined task todo>" --focus-note "<human-approved focus>" --focus-doc docs/components/example/design.md
+agentkit update --set-task "<refined task todo>" --set-plan "<plan>" \
+  --add-focus-note "<human-approved focus>" \
+  --add-focus-doc docs/components/example/design.md
 ```
 
-The implementing agent should preserve refined focus in the task state and, when the focus changes durable design intent, in the relevant docs.
+Set replaces scalar context. Add is duplicate-safe, and remove succeeds when a
+value is already absent. Update changes only requested task-context fields; it
+does not reopen a terminal task or fabricate checks, review, or derived status.
+
+The implementing agent should preserve refined focus in task state and, when
+the focus changes durable design intent, in the relevant docs.
 
 This works well when the agent needs AgentKit's orientation before the design is fully clear.
 

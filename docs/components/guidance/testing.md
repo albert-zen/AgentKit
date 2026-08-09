@@ -40,6 +40,11 @@ The tests should not assert exact prose unless the wording is part of the contra
 - blocked tasks can close only with a recorded question
 - blocked close requires an existing started task
 - stale receipts are invalidated when the diff fingerprint changes
+- clean-tree evidence is invalidated when HEAD changes
+- completed state remains terminal when its fingerprint is unchanged, even if
+  local receipt files are later cleaned up
+- each lifecycle gate exposes a stable rule id, outcome, reason, and next action
+- status, reminders, close, and Codex delivery consume the shared evaluation
 - unchanged acknowledged warnings do not repeat indefinitely
 
 Fallback tests should verify that blocked closure preserves:
@@ -60,6 +65,7 @@ Reminder tests should eventually verify:
 - stale receipts produce actionable missing-gate messages
 - `check`, `status`, `remind`, and `watch` derive reminders from the same sampler
 - reminder rendering does not change task state beyond the normal receipt side effects of the command that displays it
+- concurrent task/receipt writers use independent temporary files and leave a valid atomic result
 
 Skill tests should verify that the AgentKit plugin skill teaches:
 

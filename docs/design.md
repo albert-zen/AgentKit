@@ -228,6 +228,26 @@ The durable docs are the source of truth for human intent. Inline summaries in r
 
 AgentKit treats a repository as an agent-readable operating environment.
 
+### Core Domain Model
+
+AgentKit's stable core is **Association**, **State**, and **Rule**, as accepted
+in [ADR 0001](decisions/0001-association-state-rule-core.md). The evaluation
+model is:
+
+```text
+Evaluation = Rules(Associations, State)
+```
+
+Associations make repository-local relationships inspectable, state records or
+observes the facts used for a particular repository version, and finite named
+rules turn those inputs into explanations and next actions. CLI commands,
+hooks, and the watcher are delivery adapters around that model rather than
+additional sources of lifecycle policy.
+
+The implementation boundary, fixed system invariants, configurable repository
+policy, and initial named rules are specified in
+[the core model architecture document](architecture/core-model.md).
+
 The repository contains:
 
 - a short root `AGENTS.md`

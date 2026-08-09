@@ -17,7 +17,8 @@ def watch_task(
 ) -> int:
     while True:
         sample = sample_lifecycle(repo)
-        output(render_reminder(sample))
+        if sample.reminder_needed or sample.state in {"no_task", "completed", "blocked"}:
+            output(render_reminder(sample))
         if once or sample.state in {"no_task", "completed", "blocked"}:
             return 0
         sleep(interval_seconds)

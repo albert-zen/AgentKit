@@ -34,16 +34,27 @@ The output should be optimized for agents: clear, structured, copyable, and acti
 
 ## Internal Architecture
 
-The implementation should keep command routing separate from lifecycle policy:
+The implementation follows the Association / State / Rule model in
+[architecture/core-model.md](architecture/core-model.md). Command routing and
+delivery stay separate from lifecycle policy:
 
 - `cli.py` parses arguments and delegates.
 - `commands.py` keeps command-level orchestration and formatted outputs.
-- `task_state.py` owns `.agentkit/tasks/*.json` reads and writes.
+- `policy.py` owns the finite rule/reminder schema and policy value types.
+- `config.py` parses repository associations and policy against that catalog.
+- `presets.py` depends on the policy catalog and materializes versioned
+  recommended values without owning rule identities.
+- `task_state.py` owns the schema-versioned `TaskState` model and
+  `.agentkit/tasks/*.json` reads and writes.
 - `receipts.py` owns check and review receipt paths and writes.
-- `lifecycle.py` owns the shared task-state sampler, status facts, and reminder text.
+- `rules.py` owns named `RuleResult` evaluation over associations and state.
+- `lifecycle.py` renders shared evaluation results as status and reminders.
 - `watch.py` owns the local reminder loop and delegates policy to `lifecycle.py`.
 
-The sampler should be reusable by `check`, `status`, `remind`, `watch`, and external adapters. It should not write state by itself; commands that already have receipt semantics, such as `check`, may still write their normal receipts.
+The evaluator is reused by `close`, `status`, `remind`, `watch`, Codex hooks,
+and external adapters. Evaluation does not write state. Commands with explicit
+state or evidence semantics, such as `update`, `check`, and `close`, own their
+respective writes.
 
 ## Core Commands
 
@@ -73,6 +84,15 @@ The generated section should state the default risk-based lifecycle boundary, wh
 - deterministic hooks through `agentkit install-hooks`
 
 The output should make clear that the initialized repo may still need human-agent configuration work before it is truly maintainable.
+
+`agentkit init --preset recommended-v1` explicitly imports the recommended
+lifecycle policy. It writes preset source/version metadata plus the effective
+named rule and reminder values into `agentkit.yml`. Reapplying the same preset
+is idempotent and preserves supported repository overrides. On an existing
+config with no policy sections, materialization appends a controlled YAML block
+without rewriting comments or unrelated text. Partial/conflicting policy text
+is rejected with a manual migration action. Plain `agentkit init` keeps its
+existing configuration shape and behavior.
 
 ## `agentkit doctor`
 
@@ -127,6 +147,27 @@ Small, self-contained, low-risk edits may skip the lifecycle when ownership is o
 The agent may run `start` after a design discussion, or run it earlier and later update the task context once the human-agent discussion clarifies the focus.
 
 The current task state should preserve `focus_notes` and `focus_docs` so another agent can recover the task's human-approved emphasis without reading the original chat.
+
+Task JSON uses schema version 1. Unversioned task files remain readable as v1
+and receive the version marker on their next AgentKit write. Persisted task
+facts do not store recomputable `needs_work` or `ready_to_close` conclusions.
+
+## `agentkit update`
+
+Change the explicit context of an existing task without re-running start-time
+orientation or resetting unrelated state.
+
+Supported operations:
+
+- `--set-task` and `--set-plan` replace scalar context;
+- `--add-focus-note` / `--remove-focus-note`;
+- `--add-focus-doc` / `--remove-focus-doc`;
+- `--add-component` / `--remove-component`.
+
+Adds are duplicate-safe and removals are safe when already absent. Update does
+not alter task lifecycle status, fingerprints, check receipts, review
+acknowledgements, or unsupported arbitrary JSON fields. Terminal tasks are not
+implicitly reopened.
 
 ## `agentkit orient`
 
@@ -319,10 +360,11 @@ Checks:
 
 - current diff fingerprint
 - whether `agentkit check` has run for that fingerprint
-- whether docs impact was addressed
+- docs-impact analysis is included in `check`, but is not represented as an
+  independently satisfied receipt in this version
 - whether review is required
-- whether review -> fix -> review receipts exist when required
-- whether meaningful review findings remain
+- whether the implementing agent acknowledged the required review loop for the
+  current fingerprint (AgentKit does not store reviewer transcripts/findings)
 - whether git status is clean or local policy allows uncommitted work
 - whether blocked human questions are recorded
 
@@ -538,7 +580,37 @@ review:
 skills:
   source: plugins/agentkit/skills/agentkit/SKILL.md
   output: plugins/agentkit/skills/agentkit/SKILL.md
+
+preset:
+  source: agentkit
+  name: recommended-v1
+  version: 1
+
+rules:
+  working_tree_clean:
+    enabled: true
+    severity: error
+  check_receipt_current:
+    enabled: true
+    severity: error
+  review_addressed:
+    enabled: true
+    severity: error
+    allow_skip: true
+  blocked_question_recorded:
+    enabled: true
+    severity: error
+
+reminders:
+  open_task: true
+  ready_to_close: true
+  stale_terminal: true
 ```
+
+These are finite named settings, not a workflow DSL. Unknown presets, rules,
+options, and unsupported values fail configuration loading. Older configs with
+no `preset`, `rules`, or `reminders` section retain the compatibility policy in
+memory.
 
 ## How The Three Key Supports Work
 

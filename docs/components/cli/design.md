@@ -22,6 +22,7 @@ Architecture lint implementation belongs in `architecture.py`; CLI and command r
 - `agentkit init`
 - `agentkit doctor`
 - `agentkit start`
+- `agentkit update`
 - `agentkit orient`
 - `agentkit intent-guidance`
 - `agentkit status`
@@ -45,6 +46,11 @@ Architecture lint implementation belongs in `architecture.py`; CLI and command r
 `start` captures durable task context and writes a task state file. `close` verifies whether the task is completed, still needs work, or is blocked on a recorded human question.
 
 `start` should accept focus context such as `--focus-note` and `--focus-doc` so agents can persist the human-approved emphasis of a task after discussion.
+
+`update` is the dedicated way to refine an existing task. It exposes only
+domain operations for setting task/plan text and adding or removing focus
+notes, focus docs, and components. It must not expose arbitrary JSON patching
+or lifecycle/evidence fields.
 
 `close` accepts `--review-complete` after a required review loop and `--skip-review-reason` as an explicit low-risk fallback where review is intentionally skipped.
 

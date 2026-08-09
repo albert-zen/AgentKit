@@ -26,6 +26,7 @@ The guidance component gives the implementing agent practical next steps:
 - closeout requirements
 - hook and reminder guidance
 - reminder state and reminder text generation
+- named, explainable lifecycle rule results
 
 ## Boundary
 
@@ -64,7 +65,7 @@ The guidance component should support `agentkit start` and `agentkit close`.
 
 It should also mention maintainability budgets as a later configuration step. New repositories often do not yet know which modules deserve strict limits, so the prompt should frame budgets as something to add once component responsibilities become clear.
 
-`start` should persist the task's durable context:
+`start` should persist the task's initial durable context:
 
 - task todo
 - intent source docs
@@ -82,6 +83,10 @@ Command output should frame that context as part of the repository's intent file
 - ask the human when a durable product, architecture, API, workflow, or taste decision is missing
 
 The task may be started after human-agent discussion, or started early and refined once the discussion clarifies the focus.
+
+Later refinement uses `agentkit update`; repeating `start` is no longer the
+recommended update path. Update changes only explicitly selected context and
+cannot write derived readiness or validation evidence.
 
 `close` should verify that the task has either completed responsibly or stopped at a recorded human decision point.
 
@@ -112,6 +117,10 @@ The guidance component should provide a shared lifecycle sampler:
 - produce missing gates
 - produce agent-facing reminder text
 
+The sampler exposes the named rule id, outcome, reason, next action, and
+blocking/advisory policy. `close` consumes the same evaluation instead of
+maintaining a second gate sequence.
+
 `agentkit check`, `agentkit status`, `agentkit remind`, `agentkit watch`, and external adapters should all use this same sampler. `check` can show reminder output for convenience, but it should not become the only place reminder policy lives.
 
 Risk-based task entry does not change lifecycle state or receipt semantics. When no task is open, `check` should still run deterministic repository checks and may write its normal check receipt; the lifecycle reminder should remain quiet and no implicit task should be created. Once a task is started, the existing check, review, fingerprint, reminder, and closeout gates apply unchanged.
@@ -124,10 +133,15 @@ Current implementation modules:
 - `task_state.py` reads and writes task state.
 - `receipts.py` reads and writes receipt files.
 - `maintainability.py` evaluates configured module size and responsibility budgets.
-- `lifecycle.py` evaluates task state, receipts, fingerprints, missing gates, and reminder text.
+- `rules.py` evaluates task state, receipts, fingerprints, named rule results,
+  and derived lifecycle readiness.
+- `lifecycle.py` renders shared evaluation results as status and reminder text.
 - `watch.py` delivers reminder text in a local loop.
 
-Near-term task-state improvements should continue from the first focus-context support. `start` can record focus notes and focus docs; later task updates should add planned checks, changed scope, and task history beyond the single default `current` task.
+Task context now has an explicit schema-v1 model and domain-level update
+operations for task/plan, focus notes/docs, and components. Planned-check,
+changed-scope, or history features need separate demonstrated requirements;
+they should not be approximated with arbitrary patching.
 
 ## Hook Guidance
 

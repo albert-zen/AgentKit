@@ -85,6 +85,7 @@ Initialization should also guide the agent to finish repository-specific maintai
 
 Track a lightweight task record for agent work:
 
+- schema version
 - task id
 - task todo
 - durable intent sources
@@ -241,7 +242,8 @@ Vision issues:
 - `init` should report whether docs, component mappings, architecture rules, hooks, and skills are present.
 - `doctor` should provide that readiness audit without mutating files.
 - `init` should keep root agent guidance small and point to the AgentKit plugin skill for the full operating guide.
-- `start` should support explicit task updates, such as focus notes, focus docs, task ids, and refined plans.
+- task context should support explicit updates for focus notes, focus docs,
+  components, task text, and refined plans without re-running `start`.
 - `close` should explain missing gates in a way agents can act on immediately.
 - task state should distinguish current focus, original task todo, human-approved constraints, receipts, and blocked handoff notes.
 - `status` should sample task state into facts about open tasks, missing gates, stale receipts, and blocked questions.
@@ -256,10 +258,16 @@ Implemented baseline:
 - `agentkit status`
 - `agentkit remind`
 - `agentkit watch --once` and continuous local watch loop
+- schema-versioned explicit `TaskState` with unversioned-file compatibility
+- domain-level `agentkit update` set/add/remove operations
+- shared named lifecycle `RuleResult` evaluation used by status, reminders, and close
+- versioned `recommended-v1` policy materialization through `init --preset`
+- explicit separation between core evaluation and CLI/hook/watcher adapters
 
 Next improvements:
 
-- richer task updates for focus docs, focus notes, planned checks, and changed scope
+- deliberately designed updates for planned checks or changed scope if repeated
+  use proves they are needed
 - clearer task history beyond the single default `current` task
 - Codex plugin-packaged skills that teach the full using-AgentKit protocol, not only command names
 - mock-agent adoption tests that verify a clean agent can use the skill and CLI without inheriting chat context
@@ -458,7 +466,7 @@ Mitigation:
 ## Near-Term Product Questions
 
 - Should the first implementation be Python CLI because ProjectMan is Python-backed?
-- What should the first `agentkit.yml` schema look like?
+- Which future task/config schema change first justifies a version-2 migration?
 - How should a code change record "docs checked, no update needed"?
 - Should `review-guidance` inspect git diff automatically or rely on explicit changed paths?
 - Which plugin or skill package formats should AgentKit support after Codex?

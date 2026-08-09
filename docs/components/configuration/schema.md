@@ -12,6 +12,32 @@
   - `output`: skill output path, defaulting to `plugins/agentkit/skills/agentkit/SKILL.md`
 - `maintainability`
   - `budgets`: repo-local file budgets for keeping modules readable and scoped
+- `preset`
+  - `source`: `agentkit`
+  - `name`: currently `recommended-v1`
+  - `version`: currently `1`
+- `rules`: supported named lifecycle rules and their finite options
+- `reminders`: supported lifecycle reminder-node booleans
+
+## Lifecycle Rules
+
+Supported rule ids are:
+
+- `working_tree_clean`
+- `check_receipt_current`
+- `review_addressed`
+- `blocked_question_recorded`
+
+Every rule supports `enabled` and `severity` (`error` or `warning`).
+`review_addressed` also supports `allow_skip`. Missing rules use the existing
+compatibility behavior. Unknown rule ids or options are errors.
+
+Supported reminder keys are `open_task`, `ready_to_close`, and
+`stale_terminal`. Each value is boolean.
+
+When `preset` provenance is present, all supported rule ids and reminder keys
+must be materialized explicitly. Omitting one is an incomplete preset error;
+repositories override a default by editing its value, not by deleting it.
 
 ## Components
 
