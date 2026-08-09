@@ -1,19 +1,23 @@
 from __future__ import annotations
 
 
-AGENTKIT_AGENT_SECTION_MARKER = "<!-- agentkit:agents-section -->"
+from agentkit.artifacts import AGENTS_BLOCK_END, AGENTS_BLOCK_START
+
+
+AGENTKIT_AGENT_SECTION_MARKER = AGENTS_BLOCK_START
 
 AGENTKIT_AGENT_SECTION = f"""### AgentKit
 
 {AGENTKIT_AGENT_SECTION_MARKER}
 This repository uses AgentKit to keep substantial agent-led changes tied to durable intent, checks, review, and closeout. Use the full lifecycle for changes that affect architecture, public behavior, state or data models, security boundaries, cross-component workflows, hooks or plugins, or otherwise need durable design and review context. Small, self-contained, low-risk edits may skip the lifecycle when ownership is obvious and verification is focused; read-only work does not need a lifecycle task. If initially small work expands, run `agentkit start --task "..."` or resume the task before continuing. A repository may require a stricter policy. For the full operating guide, read the AgentKit plugin skill.
+{AGENTS_BLOCK_END}
 """
 
 DEFAULT_AGENT_MD = f"""{AGENTKIT_AGENT_SECTION}
 """
 
 
-DEFAULT_AGENTKIT_YML = """version: 1
+DEFAULT_AGENTKIT_YML = """version: 2
 
 docs:
   root: docs
@@ -132,6 +136,24 @@ lifecycle status, fingerprints, or validation evidence.
 
 Use `agentkit start --component <name>` when you already know the component. Otherwise, include the task text and let AgentKit infer affected components.
 
+## Init, Preset, And Upgrade
+
+These operations have different ownership boundaries:
+
+- `agentkit init` adopts AgentKit and creates the latest repository format.
+- `agentkit init --preset recommended-v1` explicitly imports a policy; it may
+  change policy because the user selected it.
+- `agentkit upgrade --dry-run` plans structural migration for an existing
+  AgentKit repository without writing repository files or receipts.
+- `agentkit upgrade` applies only the proven AgentKit-managed envelope changes
+  in that plan. It preserves repository policy, configuration content, task
+  state, and receipts.
+
+Review every reported conflict. If AgentKit cannot prove that a customized or
+ambiguous artifact is managed and losslessly replaceable, it intentionally
+writes nothing; do not work around that result by rerunning init or selecting a
+preset.
+
 ## During Design
 
 Use:
@@ -207,7 +229,7 @@ Use blocked close when continuing would require an unsupported assumption. Inclu
 
 DEFAULT_CODEX_PLUGIN_JSON = """{
   "name": "agentkit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Preserve human intent and project maintainability by guiding agents to read durable intent files and persist meaningful design, docs, and test changes.",
   "skills": "./skills/",
   "hooks": "./hooks.json",

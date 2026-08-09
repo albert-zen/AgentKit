@@ -6,10 +6,10 @@ from pathlib import Path
 from typing import Any
 
 from agentkit.fs import write_json_atomic
+from agentkit.versions import TASK_STATE_SCHEMA_VERSION
 
 
 DEFAULT_TASK_ID = "current"
-TASK_STATE_SCHEMA_VERSION = 1
 TASK_LIFECYCLE_STATUSES = {"open", "completed", "blocked"}
 
 

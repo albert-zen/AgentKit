@@ -278,6 +278,13 @@ This boundary controls whether a task is opened; it does not create a second tas
 
 At repository setup time, the agent runs `agentkit init`.
 
+Initialization, policy selection, and repository upgrade are distinct. `init`
+creates the latest format for new adoption; `init --preset` materializes an
+explicit policy choice; `upgrade` migrates only AgentKit-managed structure in
+an existing repository while preserving its chosen policy and content. Package
+installation never silently advances repository, preset, task-state, or
+managed-artifact versions.
+
 The purpose of `init` is not only to create files. It should instruct the agent to improve the repository's long-term maintainability by configuring:
 
 - documentation structure
@@ -804,6 +811,21 @@ AgentKit may optionally emit a durable context summary for external systems, but
 Explain repository readiness for agent-first development.
 
 `doctor` should audit whether the repository has the AgentKit entry guidance, config, docs, valid mappings, plugin-packaged skill, and optional hook setup. It reports missing readiness items and optional improvements without changing files.
+
+It also reports current and latest supported repository formats and classifies
+the repository as `up_to_date`, `upgrade_available`, or `blocked`. A future
+unsupported format is incompatible rather than a candidate for downgrade.
+
+### `agentkit upgrade`
+
+Upgrade is a finite sequence of reviewed repository-format migrations. Dry-run
+computes the full plan without repository or receipt writes; apply uses the same
+plan and rolls back earlier replacements if a later replacement or validation
+fails. The first migration changes only the v1 YAML format scalar and a known
+legacy AgentKit agents section, converting that section to a bounded/versioned
+managed block. Unknown or customized content is preserved or conflicts; it is
+never inferred. See ADR 0002 and the
+[completed repository-format-v2 implementation spec](specs/completed/repository-format-v2-upgrade.md).
 
 ### `agentkit skill`
 

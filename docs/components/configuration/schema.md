@@ -2,7 +2,8 @@
 
 ## Root Fields
 
-- `version`
+- `version`: repository configuration format; supported values are legacy `1`
+  and current `2`
 - `docs`
 - `components`
 - `layers`
@@ -20,6 +21,11 @@
 - `reminders`: supported lifecycle reminder-node booleans
 
 ## Lifecycle Rules
+
+Repository format is not the package version, preset version, task-state schema
+version, or managed-artifact version. Those domains advance independently.
+Format v2 requires a bounded AgentKit agents block; it does not change the
+shape or semantics of the policy fields below.
 
 Supported rule ids are:
 

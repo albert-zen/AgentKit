@@ -24,6 +24,13 @@ AgentKit may optionally generate a context summary for external systems, logs, o
 
 Clean-context review should be expected for non-trivial changes.
 
+Repository-format migration review should compare both ownership and bytes:
+verify that only versioned AgentKit-managed structure changes, user-owned YAML
+policy and Markdown outside bounded blocks remain byte-identical, conflicts
+produce zero writes, partial apply rolls back, and task state/receipts are not
+used as or rewritten by repository-format evidence. Review must also keep
+`init`, preset selection, and upgrade semantics separate.
+
 Examples:
 
 - new features

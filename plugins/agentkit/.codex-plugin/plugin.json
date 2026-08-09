@@ -1,6 +1,6 @@
 {
   "name": "agentkit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Preserve human intent and project maintainability by guiding agents to read durable intent files and persist meaningful design, docs, and test changes.",
   "skills": "./skills/",
   "hooks": "./hooks.json",

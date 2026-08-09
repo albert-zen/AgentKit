@@ -16,6 +16,8 @@ AgentKit's own configuration maps lifecycle modules explicitly. The current repo
 - maintainability budgets for repo-specific module size and responsibility limits
 - finite named lifecycle rule policy and reminder selection
 - versioned preset provenance
+- repository format version, independent from package, preset, task-state, and
+  managed-artifact versions
 
 ## Boundary
 
@@ -36,3 +38,13 @@ Preset application must preserve hand-written YAML comments and unrelated
 configuration. Existing partial or conflicting policy sections fail with an
 explicit migration instruction rather than being silently merged or
 re-serialized.
+
+Repository format v1 remains readable for compatibility and diagnosis; v2 is
+the latest creation target. Unknown future formats fail clearly. Format
+migrations must not round-trip mixed-ownership YAML through `safe_dump`:
+controlled text edits preserve unknown fields, comments, ordering, quoting,
+and project policy byte-for-byte outside an owned token.
+
+Current managed-artifact markers live in `artifacts.py`. New templates and
+historical migrations both depend on that stable contract; templates do not
+depend on retained migration implementations.

@@ -1,4 +1,4 @@
-version: 1
+version: 2
 
 docs:
   root: docs
@@ -29,11 +29,15 @@ components:
     description: agentkit.yml schema and configuration parsing.
     code:
       - src/agentkit/config.py
+      - src/agentkit/artifacts.py
       - src/agentkit/policy.py
       - src/agentkit/presets.py
+      - src/agentkit/migrations.py
+      - src/agentkit/versions.py
       - agentkit.yml
       - tests/test_config.py
       - tests/test_presets.py
+      - tests/test_upgrade.py
     docs:
       - docs/components/configuration/design.md
       - docs/components/configuration/schema.md
@@ -138,12 +142,15 @@ layers:
   config:
     paths:
       - src/agentkit/config.py
+      - src/agentkit/artifacts.py
       - src/agentkit/policy.py
       - src/agentkit/presets.py
+      - src/agentkit/versions.py
     may_import: []
   utilities:
     paths:
       - src/agentkit/fs.py
+      - src/agentkit/migrations.py
       - src/agentkit/git.py
       - src/agentkit/render.py
       - src/agentkit/templates.py

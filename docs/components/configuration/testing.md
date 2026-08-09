@@ -15,6 +15,10 @@ Configuration tests should prove that representative `agentkit.yml` data parses 
 - refusal of matching preset provenance with incomplete rule/reminder materialization
 - named lifecycle rule defaults and supported options
 - clear failures for unknown presets, rules, options, and invalid severities
+- v1 read compatibility, v2 parsing/default initialization, and clear future
+  format rejection
+- byte-preserving v1-to-v2 scalar migration across comments, unknown fields,
+  custom policy values, and external formatting
 
 AgentKit's own dogfood checks should also verify that new implementation modules are mapped to components and architecture layers in `agentkit.yml`.
 

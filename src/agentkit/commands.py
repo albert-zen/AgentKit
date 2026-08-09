@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import yaml
@@ -18,6 +19,14 @@ from agentkit.fs import expand_patterns, matches_any, relpath
 from agentkit.git import changed_paths, diff_fingerprint, git_path, is_git_repo
 from agentkit.lifecycle import reminder_text, status_text
 from agentkit.maintainability import lint_maintainability
+from agentkit.migrations import (
+    LEGACY_AGENT_MARKER,
+    MigrationPlan,
+    Conflict,
+    apply_migration_plan,
+    plan_repository_upgrade,
+    read_repository_format,
+)
 from agentkit.receipts import write_receipt
 from agentkit.render import bullet, section
 from agentkit.rules import RuleResult, evaluate_lifecycle
@@ -69,6 +78,7 @@ INTENT_SYSTEM_REMINDER = [
 def init_repo(repo: Path, force: bool = False, preset: str | None = None) -> str:
     created: list[str] = []
     config_path = repo / "agentkit.yml"
+    _validate_init_agents_state(repo, config_path, force=force)
     preset_content: str | None = None
     if preset:
         source_text = (
@@ -128,19 +138,50 @@ def doctor(repo: Path) -> tuple[int, str]:
 
     agents_path = _agents_path(repo)
     if agents_path.exists():
-        agents_text = agents_path.read_text(encoding="utf-8")
-        if AGENTKIT_AGENT_SECTION_MARKER in agents_text:
-            ok.append("AGENTS.md contains AgentKit entry guidance")
+        try:
+            agents_text = agents_path.read_text(encoding="utf-8")
+        except UnicodeDecodeError as exc:
+            findings.append(f"Unable to read AGENTS.md as UTF-8: {exc}")
         else:
-            findings.append("AGENTS.md is missing AgentKit entry guidance; run `agentkit init`")
+            if AGENTKIT_AGENT_SECTION_MARKER in agents_text or LEGACY_AGENT_MARKER in agents_text:
+                ok.append("AGENTS.md contains AgentKit entry guidance")
+            else:
+                findings.append("AGENTS.md is missing AgentKit entry guidance; run `agentkit init`")
     else:
         findings.append("Missing AGENTS.md; run `agentkit init`")
 
     config_path = repo / "agentkit.yml"
     configured_doc_paths: list[str] = []
+    repository_status = "blocked"
+    repository_version_lines: list[str] = []
     if config_path.exists():
         ok.append("agentkit.yml exists")
         try:
+            upgrade_plan = plan_repository_upgrade(repo)
+            upgrade_validation_errors = (
+                _upgrade_validation_errors(repo)
+                if upgrade_plan.changes and not upgrade_plan.conflicts
+                else []
+            )
+            if upgrade_plan.conflicts or upgrade_validation_errors:
+                repository_status = "blocked"
+                findings.extend(
+                    f"Repository upgrade conflict in {relpath(item.path, repo)}: {item.reason}"
+                    for item in upgrade_plan.conflicts
+                )
+                findings.extend(
+                    f"Repository upgrade validation conflict: {error}"
+                    for error in upgrade_validation_errors
+                )
+            elif upgrade_plan.changes:
+                repository_status = "upgrade_available"
+            else:
+                repository_status = "up_to_date"
+            repository_version_lines = [
+                f"current repository format: {upgrade_plan.source_version if upgrade_plan.source_version is not None else 'unknown'}",
+                f"latest supported format: {upgrade_plan.target_version}",
+                f"repository format status: {repository_status}",
+            ]
             config = load_config(repo)
             configured_doc_paths = [path for path in [config.docs.design, config.docs.workflow] if path]
             manifest_errors = validate_manifest(repo, config)
@@ -212,11 +253,88 @@ def doctor(repo: Path) -> tuple[int, str]:
         "\n\n".join(
             [
                 section("AgentKit Doctor", ["ready" if code == 0 else "needs_attention"]),
+                section("Repository Format", repository_version_lines or ["repository format status: blocked"]),
                 section("Ready Checks", bullet(ok)),
                 section("Recommended Actions", bullet(findings)),
                 section("Optional Improvements", bullet(recommendations)),
             ]
         ),
+    )
+
+def upgrade_repo(repo: Path, dry_run: bool = False) -> tuple[int, str]:
+    plan = plan_repository_upgrade(repo)
+    if plan.conflicts:
+        return 1, _render_upgrade_plan(plan, dry_run=dry_run, changed_files=())
+    validation_errors = _upgrade_validation_errors(repo) if plan.changes else []
+    if validation_errors:
+        plan = replace(
+            plan,
+            conflicts=tuple(
+                Conflict(repo, error, "Fix the deterministic repository check failure, then retry dry-run.")
+                for error in validation_errors
+            ),
+            next_action="Fix deterministic repository check failures and run `agentkit upgrade --dry-run` again.",
+        )
+        return 1, _render_upgrade_plan(plan, dry_run=dry_run, changed_files=())
+    changed = () if dry_run else apply_migration_plan(
+        plan, validate_repository=_validate_upgraded_repository
+    )
+    return 0, _render_upgrade_plan(plan, dry_run=dry_run, changed_files=changed)
+
+def _upgrade_validation_errors(repo: Path) -> list[str]:
+    config = load_config(repo)
+    errors = [f"manifest: {item}" for item in validate_manifest(repo, config)]
+    architecture_code, architecture_output = lint_architecture(repo)
+    if architecture_code:
+        errors.append(f"architecture lint: {architecture_output.replace(chr(10), ' ')}")
+    maintainability_code, maintainability_output = lint_maintainability(repo, verbose=False)
+    if maintainability_code:
+        errors.append(f"maintainability lint: {maintainability_output.replace(chr(10), ' ')}")
+    return errors
+
+def _validate_upgraded_repository(repo: Path) -> None:
+    errors = _upgrade_validation_errors(repo)
+    if errors:
+        raise ValueError("Post-upgrade deterministic checks failed: " + "; ".join(errors))
+
+def _render_upgrade_plan(
+    plan: MigrationPlan,
+    *,
+    dry_run: bool,
+    changed_files: tuple[str, ...],
+) -> str:
+    planned = [f"{relpath(change.path, plan.repo)}: {change.description} ({change.ownership})" for change in plan.changes]
+    conflicts = [f"{relpath(item.path, plan.repo)}: {item.reason}. Next action: {item.next_action}" for item in plan.conflicts]
+    if plan.conflicts:
+        status = "blocked; zero files written"
+        next_action = plan.next_action
+    elif dry_run:
+        status = "dry-run; no files written"
+        next_action = plan.next_action
+    elif changed_files:
+        status = "applied"
+        next_action = "Run project tests and `agentkit check`; repository policy and runtime evidence were preserved."
+    else:
+        status = "already up to date; No files changed"
+        next_action = plan.next_action
+    return "\n\n".join(
+        [
+            section("Repository Upgrade Plan", [status]),
+            section(
+                "Versions",
+                [
+                    f"source repository format: {plan.source_version if plan.source_version is not None else 'unknown'}",
+                    f"target repository format: {plan.target_version}",
+                ],
+            ),
+            section("Migration IDs", bullet(plan.migration_ids)),
+            section("Planned Files", bullet(planned)),
+            section("Changed Files", bullet(changed_files)),
+            section("Preserved Policy", bullet(plan.preserved_policy)),
+            section("Conflicts", bullet(conflicts)),
+            section("Validation", bullet(plan.validation)),
+            section("Next Action", [next_action]),
+        ]
     )
 
 
@@ -731,11 +849,47 @@ def _ensure_agentkit_agents_section(path: Path, created: list[str], force: bool)
         created.append(path.name)
         return
     text = path.read_text(encoding="utf-8")
-    if AGENTKIT_AGENT_SECTION_MARKER in text:
+    if AGENTKIT_AGENT_SECTION_MARKER in text or LEGACY_AGENT_MARKER in text:
         return
     separator = "\n\n" if text.strip() else ""
     path.write_text(f"{text.rstrip()}{separator}{AGENTKIT_AGENT_SECTION}\n", encoding="utf-8")
     created.append(f"{path.name} AgentKit section")
+
+
+def _validate_init_agents_state(repo: Path, config_path: Path, *, force: bool) -> None:
+    existing_paths: list[Path] = []
+    for name in ("AGENTS.md", "agents.md"):
+        candidate = repo / name
+        if candidate.exists() and not any(candidate.samefile(existing) for existing in existing_paths):
+            existing_paths.append(candidate)
+    if len(existing_paths) > 1:
+        raise ValueError(
+            "Both AGENTS.md and agents.md exist, so AgentKit instruction ownership is ambiguous. "
+            "Consolidate them before running init."
+        )
+    path = _agents_path(repo)
+    if not path.exists():
+        return
+    text = path.read_text(encoding="utf-8")
+    managed_count = text.count("<!-- agentkit:agents-section")
+    has_valid_v2 = (
+        managed_count == 1
+        and text.count(AGENTKIT_AGENT_SECTION_MARKER) == 1
+        and text.count("<!-- /agentkit:agents-section -->") == 1
+        and LEGACY_AGENT_MARKER not in text
+        and text.index(AGENTKIT_AGENT_SECTION_MARKER)
+        < text.index("<!-- /agentkit:agents-section -->")
+    )
+    if has_valid_v2:
+        return
+    if LEGACY_AGENT_MARKER in text and config_path.exists() and not force:
+        if read_repository_format(repo) == 1:
+            return
+    if managed_count or LEGACY_AGENT_MARKER in text:
+        raise ValueError(
+            "Existing AgentKit agents guidance is legacy, incomplete, or ambiguous. "
+            "Use `agentkit upgrade --dry-run` for a v1 repository or review the managed block manually; init will not mix it with format 2."
+        )
 
 
 def _ensure_agentkit_marketplace_entry(path: Path, created: list[str], force: bool) -> None:

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentkit"
-version = "0.1.0"
+version = "0.2.0"
 description = "A lightweight repo-local harness for agent-first software maintainability."
 readme = "README.md"
 requires-python = ">=3.11"

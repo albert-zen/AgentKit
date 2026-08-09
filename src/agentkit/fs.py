@@ -59,6 +59,32 @@ def write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
             temporary_path.unlink(missing_ok=True)
 
 
+def replace_bytes_atomic_preserving_mode(path: Path, content: bytes) -> None:
+    """Atomically replace an existing file without changing its permission mode."""
+    if path.is_symlink():
+        raise ValueError(f"Refusing to atomically replace symbolic link: {path}")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    original_mode = path.stat().st_mode & 0o7777
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            temporary_path = Path(handle.name)
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.chmod(temporary_path, original_mode)
+        os.replace(temporary_path, path)
+        temporary_path = None
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+
+
 def _matches(path: str, pattern: str) -> bool:
     if fnmatch(path, pattern):
         return True

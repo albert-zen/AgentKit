@@ -87,6 +87,11 @@ Mock-agent adoption tests should ask a clean agent to use the AgentKit plugin sk
 
 Agent instruction tests should verify that `init` keeps `AGENTS.md` concise and does not duplicate the full skill or product design there. Repeated `init` calls should be idempotent, and an existing marked AgentKit section should not be rewritten to the latest default policy. `doctor` should accept concise local guidance based on the AgentKit marker without requiring exact default prose, including stricter repository policy.
 
+Upgrade fixtures should verify byte-exact prefix/suffix preservation around a
+known legacy section, conflict on customized or ambiguous legacy boundaries,
+and direct bounded/versioned output from new init. Upgrade must not use task or
+receipt evidence as repository-format migration state.
+
 Watcher tests should eventually verify:
 
 - `agentkit watch` reuses the same reminder/status logic as the CLI

@@ -25,6 +25,11 @@ Git hooks installed by AgentKit live under `.git/hooks/` and are local to the ch
 
 Hook installation should ask Git for the hook path instead of assuming `.git` is a directory. This keeps AgentKit compatible with linked worktrees.
 
+AgentKit dogfoods repository upgrades. Package version 0.2.0 supports legacy
+repository format v1 and current format v2; the checked-in repository reaches
+v2 through the public upgrade command, not a hand-edited format marker. Its
+task-state schema and local receipts remain independent runtime state.
+
 ## Non-Goals
 
 - AgentKit does not need a hosted repository or remote origin for the MVP.

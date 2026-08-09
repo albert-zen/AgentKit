@@ -25,6 +25,8 @@ Skill content tests should verify that the bundled skill teaches:
 - how to run `check`, `status`, `remind`, and `watch`
 - how to request clean-context review
 - how to close completed or blocked work
+- the difference between `init`, `init --preset`, and `upgrade`, including
+  dry-run and conflict-first zero-write behavior
 
 Plugin tests should stay deterministic. They should validate file shape and manifest content without requiring Codex itself to install or reload the plugin.
 

@@ -23,6 +23,7 @@ from agentkit.commands import (
     start_task,
     status_task,
     update_task,
+    upgrade_repo,
 )
 from agentkit.watch import watch_task
 
@@ -39,6 +40,9 @@ def main(argv: list[str] | None = None) -> None:
         "--preset",
         help="Materialize a versioned policy preset, currently recommended-v1.",
     )
+
+    upgrade_parser = subparsers.add_parser("upgrade")
+    upgrade_parser.add_argument("--dry-run", action="store_true")
 
     start_parser = subparsers.add_parser("start")
     start_parser.add_argument("--component", action="append", default=[])
@@ -115,6 +119,11 @@ def main(argv: list[str] | None = None) -> None:
     try:
         if args.command == "init":
             print(init_repo(repo, force=args.force, preset=args.preset))
+        elif args.command == "upgrade":
+            code, output = upgrade_repo(repo, dry_run=args.dry_run)
+            print(output)
+            if code:
+                raise SystemExit(code)
         elif args.command == "start":
             print(
                 start_task(

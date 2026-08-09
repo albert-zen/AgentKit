@@ -87,6 +87,24 @@ If the repository already has a documentation system, AgentKit should adapt to i
 
 After initialization, `agentkit doctor` should report which maintainability surfaces are present and which still need attention.
 
+### Existing Repository Upgrade
+
+Installing a newer AgentKit package is not initialization and does not change
+repository policy. For an existing repository:
+
+```text
+agentkit doctor
+  -> agentkit upgrade --dry-run
+  -> review preserved policy and conflicts
+  -> agentkit upgrade
+  -> project tests and agentkit check
+```
+
+Dry-run is byte-read-only. Apply migrates only proven AgentKit-managed
+structure, succeeds without changes when current, and rolls back a partial
+multi-file failure. `init --preset` remains an explicit policy import and must
+not be substituted for upgrade.
+
 ## 2. Task Start
 
 Task start happens for each concrete unit of substantial work that needs durable lifecycle context.
@@ -414,6 +432,7 @@ The first useful version should support the lifecycle manually through CLI comma
 Minimum surfaces:
 
 - `agentkit init`
+- `agentkit upgrade`
 - `agentkit start`
 - `agentkit check`
 - `agentkit docs-impact`

@@ -137,6 +137,14 @@ Current implementation modules:
   and derived lifecycle readiness.
 - `lifecycle.py` renders shared evaluation results as status and reminder text.
 - `watch.py` delivers reminder text in a local loop.
+- `versions.py` keeps independent version domains explicit.
+- `migrations.py` plans and applies finite repository-envelope migrations;
+  policy evaluation and task evidence remain outside it.
+
+Repository upgrade follows the same durable-intent principle as lifecycle
+guidance: preserve local policy, report unsupported ambiguity, and provide a
+specific next action. New bounded agents blocks allow future managed guidance
+to be identified without treating the rest of `AGENTS.md` as AgentKit-owned.
 
 Task context now has an explicit schema-v1 model and domain-level update
 operations for task/plan, focus notes/docs, and components. Planned-check,

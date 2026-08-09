@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from agentkit.versions import RECOMMENDED_PRESET_VERSION
+
 
 NAMED_RULE_IDS = (
     "working_tree_clean",
@@ -10,7 +12,7 @@ NAMED_RULE_IDS = (
     "blocked_question_recorded",
 )
 REMINDER_KEYS = ("open_task", "ready_to_close", "stale_terminal")
-SUPPORTED_PRESETS = {"recommended-v1": 1}
+SUPPORTED_PRESETS = {"recommended-v1": RECOMMENDED_PRESET_VERSION}
 
 
 @dataclass(frozen=True)

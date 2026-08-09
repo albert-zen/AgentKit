@@ -34,6 +34,21 @@ repository configuration:
 agentkit init --preset recommended-v1
 ```
 
+`init` adopts AgentKit in a new repository, while `--preset` explicitly
+materializes a selected lifecycle policy. Existing AgentKit repositories use a
+separate, policy-preserving upgrade path:
+
+```bash
+agentkit doctor
+agentkit upgrade --dry-run
+agentkit upgrade
+```
+
+Upgrade changes only versioned AgentKit-managed repository structure. It does
+not reapply a preset or reset components, rules, reminders, budgets, comments,
+unknown configuration, task state, or receipts. A conflict is reported with
+zero writes whenever ownership or losslessness cannot be proven.
+
 Use the full lifecycle for substantial agent-led changes:
 
 ```bash
@@ -75,6 +90,9 @@ The product roadmap lives in [docs/roadmap.md](docs/roadmap.md).
 The Association / State / Rule implementation boundary lives in
 [docs/architecture/core-model.md](docs/architecture/core-model.md), governed by
 [ADR 0001](docs/decisions/0001-association-state-rule-core.md).
+
+Repository upgrade is governed by
+[ADR 0002](docs/decisions/0002-repository-upgrade-preserves-user-intent.md).
 
 ## License
 

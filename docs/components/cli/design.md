@@ -21,6 +21,7 @@ Architecture lint implementation belongs in `architecture.py`; CLI and command r
 
 - `agentkit init`
 - `agentkit doctor`
+- `agentkit upgrade`
 - `agentkit start`
 - `agentkit update`
 - `agentkit orient`
@@ -65,6 +66,12 @@ or lifecycle/evidence fields.
 `init` creates the default AgentKit surfaces and ensures `AGENTS.md` or `agents.md` contains a small low-level AgentKit entry section. It should not overwrite an existing agent instruction file just to add AgentKit guidance.
 
 `doctor` audits readiness without changing files. It should report required missing surfaces separately from optional improvements.
+
+`doctor` also reports current/latest repository format and
+`up_to_date`/`upgrade_available`/`blocked`. `upgrade --dry-run` renders a
+complete zero-write plan; `upgrade` applies it. The CLI only routes and renders
+these operations—migration ownership and atomicity live below the command
+adapter. Upgrade is not an alias for `init --preset`.
 
 ## Hook Commands
 

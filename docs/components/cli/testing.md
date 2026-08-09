@@ -32,6 +32,10 @@ Init and doctor coverage should verify:
 - unknown presets fail clearly
 - `doctor` reports missing readiness items
 - `doctor` reports an initialized repo with valid mappings as ready
+- `doctor` reports v1 upgrade availability, v2 current status, and future or
+  conflicting formats as blocked
+- `upgrade --dry-run` produces the complete plan with zero byte changes
+- `upgrade` routes apply, conflict exit status, no-op idempotence, and output
 
 Check command coverage should verify:
 

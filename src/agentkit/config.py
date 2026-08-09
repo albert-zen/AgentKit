@@ -14,6 +14,7 @@ from agentkit.policy import (
     PresetConfig,
     ReminderConfig,
 )
+from agentkit.versions import LATEST_REPOSITORY_FORMAT, SUPPORTED_REPOSITORY_FORMATS
 
 
 DEFAULT_CONFIG_NAME = "agentkit.yml"
@@ -98,6 +99,15 @@ def load_config(repo: Path, config_path: Path | None = None) -> AgentKitConfig:
 
 
 def parse_config(raw: dict[str, Any]) -> AgentKitConfig:
+    version = raw.get("version", 1)
+    if type(version) is not int or version not in SUPPORTED_REPOSITORY_FORMATS:
+        if type(version) is int and version > LATEST_REPOSITORY_FORMAT:
+            raise ValueError(
+                f"Unsupported future AgentKit repository format {version}; latest supported is {LATEST_REPOSITORY_FORMAT}"
+            )
+        raise ValueError(
+            f"Unsupported AgentKit repository format {version!r}; supported formats are {SUPPORTED_REPOSITORY_FORMATS}"
+        )
     docs_raw = raw.get("docs") or {}
     components_raw = raw.get("components") or {}
     layers_raw = raw.get("layers") or {}
@@ -170,7 +180,7 @@ def parse_config(raw: dict[str, Any]) -> AgentKitConfig:
     _validate_materialized_policy(preset, rules_raw, reminders_raw)
 
     return AgentKitConfig(
-        version=int(raw.get("version", 1)),
+        version=version,
         docs=docs,
         components=components,
         layers=layers,

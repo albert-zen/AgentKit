@@ -263,6 +263,11 @@ Implemented baseline:
 - shared named lifecycle `RuleResult` evaluation used by status, reminders, and close
 - versioned `recommended-v1` policy materialization through `init --preset`
 - explicit separation between core evaluation and CLI/hook/watcher adapters
+- package 0.2.0 with independent repository-format, preset, task-state, and
+  managed-artifact version domains
+- repository format v2 initialization and finite v1-to-v2 upgrade planning
+- byte-preserving YAML format-marker migration, bounded managed agents blocks,
+  conflict-first zero-write behavior, dry-run, rollback, and doctor status
 
 Next improvements:
 

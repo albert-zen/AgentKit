@@ -1,3 +1,6 @@
 """AgentKit CLI package."""
 
-__version__ = "0.1.0"
+from agentkit.versions import PACKAGE_VERSION
+
+
+__version__ = PACKAGE_VERSION

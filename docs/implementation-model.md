@@ -44,6 +44,10 @@ delivery stay separate from lifecycle policy:
 - `config.py` parses repository associations and policy against that catalog.
 - `presets.py` depends on the policy catalog and materializes versioned
   recommended values without owning rule identities.
+- `versions.py` names package, repository-format, preset, task-state, and
+  managed-artifact version domains without coupling their advancement.
+- `migrations.py` owns finite sequential repository-format planning,
+  ownership/conflict detection, byte-preserving changes, and rollback.
 - `task_state.py` owns the schema-versioned `TaskState` model and
   `.agentkit/tasks/*.json` reads and writes.
 - `receipts.py` owns check and review receipt paths and writes.
@@ -94,6 +98,30 @@ without rewriting comments or unrelated text. Partial/conflicting policy text
 is rejected with a manual migration action. Plain `agentkit init` keeps its
 existing configuration shape and behavior.
 
+New initialization writes the latest repository format and a bounded,
+managed-artifact-versioned agents block. It does not upgrade an existing v1
+configuration; callers use `agentkit upgrade` for that operation.
+
+## `agentkit upgrade`
+
+Plan and apply are separate. `upgrade --dry-run` reads all affected files,
+classifies ownership, computes final bytes, validates them in memory, and
+renders source/target formats, migration ids, file changes, preserved policy,
+conflicts, and next action. It does not call a receipt-writing check.
+
+Apply first verifies that every source byte sequence still matches its plan,
+then atomically replaces individual files. Originals remain available until
+post-write configuration and managed-block validation succeeds; failure
+restores every attempted file and each replacement preserves the original file
+mode. Receipt-free manifest, architecture, and failing maintainability checks
+run before and after application. Format v1 remains readable. Format v2 is the
+current initialization target. Unknown future formats fail without downgrade.
+
+The v1-to-v2 migration uses a controlled scalar edit rather than YAML
+serialization. It preserves comments, unknown fields, order, formatting, and
+policy values. Only byte-exact shipped legacy agent sections are automatically
+bounded. Task schema v1 and receipts are independent and untouched.
+
 ## `agentkit doctor`
 
 Audit repository readiness without changing files.
@@ -108,6 +136,9 @@ Outputs:
 The first implementation should check for AgentKit entry guidance in `AGENTS.md` or `agents.md`, `agentkit.yml`, valid manifest references, component mappings, docs, the AgentKit plugin skill, and optional Git hooks.
 
 `doctor` may recommend maintainability budgets when none are configured, but an empty budget list should not be treated as an invalid repo. Budgets are most useful after humans and agents understand the repository's module responsibilities well enough to set meaningful limits.
+
+Doctor also performs read-only repository-format diagnosis and reports
+`up_to_date`, `upgrade_available`, or `blocked` beside current/latest versions.
 
 ## `agentkit start`
 
@@ -530,7 +561,7 @@ The AgentKit skill is an operating guide, not a developer design doc. It should 
 First draft of `agentkit.yml`:
 
 ```yaml
-version: 1
+version: 2
 
 docs:
   root: docs

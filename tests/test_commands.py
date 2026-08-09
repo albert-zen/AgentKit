@@ -1,6 +1,8 @@
 from pathlib import Path
 import json
 
+import pytest
+
 from agentkit.commands import (
     close_task,
     check,
@@ -21,6 +23,7 @@ from agentkit.commands import (
 )
 from agentkit.cli import _normalize_global_repo_arg
 from agentkit.git import changed_paths, diff_fingerprint, git_path
+from agentkit.migrations import AGENTS_BLOCK_END
 from agentkit.templates import AGENTKIT_AGENT_SECTION_MARKER, DEFAULT_SKILL_MD
 from agentkit.watch import watch_task
 
@@ -75,12 +78,38 @@ def test_init_does_not_rewrite_existing_agentkit_policy(tmp_path: Path) -> None:
         "### AgentKit\n\n"
         f"{AGENTKIT_AGENT_SECTION_MARKER}\n"
         "This repository requires the full lifecycle for every write.\n"
+        f"{AGENTS_BLOCK_END}\n"
     )
     (tmp_path / "AGENTS.md").write_text(agents, encoding="utf-8")
 
     init_repo(tmp_path)
 
     assert (tmp_path / "AGENTS.md").read_text(encoding="utf-8") == agents
+
+
+def test_init_rejects_incomplete_v2_agents_block_before_writes(tmp_path: Path) -> None:
+    agents = f"### AgentKit\n\n{AGENTKIT_AGENT_SECTION_MARKER}\ncustom policy\n"
+    (tmp_path / "AGENTS.md").write_text(agents, encoding="utf-8")
+
+    with pytest.raises(ValueError, match="incomplete"):
+        init_repo(tmp_path)
+
+    assert (tmp_path / "AGENTS.md").read_text(encoding="utf-8") == agents
+    assert not (tmp_path / "agentkit.yml").exists()
+    assert not (tmp_path / "docs").exists()
+
+
+def test_init_rejects_dual_agents_filenames_before_writes(tmp_path: Path) -> None:
+    (tmp_path / "AGENTS.md").write_text("# Upper\n", encoding="utf-8")
+    (tmp_path / "agents.md").write_text("# Lower\n", encoding="utf-8")
+    if (tmp_path / "AGENTS.md").samefile(tmp_path / "agents.md"):
+        pytest.skip("filesystem is case-insensitive")
+
+    with pytest.raises(ValueError, match="Both AGENTS.md and agents.md"):
+        init_repo(tmp_path)
+
+    assert not (tmp_path / "agentkit.yml").exists()
+    assert not (tmp_path / "docs").exists()
 
 
 def test_init_appends_agentkit_section_to_existing_agents(tmp_path: Path) -> None:
@@ -228,7 +257,8 @@ def test_doctor_accepts_stricter_repository_lifecycle_policy(tmp_path: Path) -> 
     (tmp_path / "AGENTS.md").write_text(
         "### AgentKit\n\n"
         f"{AGENTKIT_AGENT_SECTION_MARKER}\n"
-        "Local policy requires AgentKit lifecycle tracking for every write.\n",
+        "Local policy requires AgentKit lifecycle tracking for every write.\n"
+        f"{AGENTS_BLOCK_END}\n",
         encoding="utf-8",
     )
     (tmp_path / "src").mkdir()

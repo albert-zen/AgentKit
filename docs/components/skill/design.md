@@ -11,6 +11,12 @@ The canonical Codex-facing package lives under `plugins/agentkit/`:
 
 `agentkit init` should create this plugin surface by default. The intent is that a repo initialized with AgentKit can make the skill available to Codex through the same plugin directory and marketplace flow as other Codex plugins.
 
+The skill distinguishes adoption, policy import, and structural migration:
+`init` creates a latest-format repository, `init --preset` imports explicit
+policy, and `upgrade` preserves existing policy while migrating only proven
+AgentKit-managed structure. It should direct agents to review dry-run conflicts
+rather than overwrite customized content.
+
 The skill remains an operating guide for agents using AgentKit. It should explain the task loop, command side effects, design-gap behavior, review expectations, lifecycle reminders, and closeout. It should not become the north-star product design for agents developing AgentKit itself.
 
 The task loop distinguishes `start` from `update`. `start` establishes initial

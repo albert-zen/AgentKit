@@ -20,3 +20,6 @@ Hook and task-state checks should verify:
 - generated task state does not appear in `git status --short`
 - check receipts do not appear in `git status --short`
 - installed Git hooks are local operational files, not tracked docs
+- the AgentKit repository's v1-to-v2 dogfood changes only planned managed
+  envelope bytes and leaves `.agentkit` task/receipt bytes unchanged
+- package metadata and `agentkit.__version__` remain synchronized
