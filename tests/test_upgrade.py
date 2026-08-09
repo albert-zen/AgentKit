@@ -71,7 +71,7 @@ skills:
 maintainability:
   budgets:
     - name: custom-budget
-      paths: [src/**]
+      paths: [src/**/*.py]
       max_lines: 77
       mode: warn
 
