@@ -6,48 +6,94 @@ It helps developers encode human intent, architecture boundaries, documentation 
 
 AgentKit is early software. The current implementation is a Python CLI plus a Codex plugin/skill bundle that helps an agent keep track of task state, durable intent, docs impact, architecture checks, review expectations, and closeout.
 
-## Install From Source
+## Requirements
+
+AgentKit requires Python 3.11 or newer.
+
+## Install 0.2.0
+
+The first supported release channel is the GitHub tag `v0.2.0`. AgentKit is
+not yet published on PyPI. Install the tagged release as an isolated CLI with
+[`uv`](https://docs.astral.sh/uv/):
 
 ```bash
-pip install -e .[dev]
+uv tool install "agentkit @ git+https://github.com/albert-zen/AgentKit.git@v0.2.0"
 ```
 
-Then verify:
+The tag in the URL fixes the installed source to AgentKit 0.2.0. Verify the
+installed command before using it in a repository:
 
 ```bash
-agentkit doctor
+agentkit --help
+```
+
+For development from a checkout, install the project and its test dependencies
+instead:
+
+```bash
+python -m pip install -e ".[dev]"
 pytest -q
 ```
 
-## Core Workflow
+## Adopt AgentKit In A New Project
 
-In a repository that should use AgentKit:
-
-```bash
-agentkit init
-```
-
-To import the versioned recommended lifecycle policy as explicit, auditable
-repository configuration:
+After installing the CLI, initialize a new AgentKit repository with the
+versioned recommended policy:
 
 ```bash
+cd /path/to/project
 agentkit init --preset recommended-v1
+agentkit doctor
+agentkit check
 ```
 
-`init` adopts AgentKit in a new repository, while `--preset` explicitly
-materializes a selected lifecycle policy. Existing AgentKit repositories use a
-separate, policy-preserving upgrade path:
+`recommended-v1` materializes the selected lifecycle rules and reminders in
+`agentkit.yml` so the repository can inspect, version, and deliberately edit
+them. Plain `agentkit init` remains available for adoption without importing
+that preset.
+
+## Upgrade An Existing AgentKit Repository
+
+Package installation and repository migration are separate. First update the
+installed CLI to the tagged release:
 
 ```bash
+uv tool install --force "agentkit @ git+https://github.com/albert-zen/AgentKit.git@v0.2.0"
+```
+
+Then, inside each existing AgentKit repository, diagnose and preview the
+migration before applying it:
+
+```bash
+cd /path/to/existing-project
 agentkit doctor
 agentkit upgrade --dry-run
 agentkit upgrade
 ```
 
-Upgrade changes only versioned AgentKit-managed repository structure. It does
-not reapply a preset or reset components, rules, reminders, budgets, comments,
-unknown configuration, task state, or receipts. A conflict is reported with
-zero writes whenever ownership or losslessness cannot be proven.
+Upgrade migrates only versioned AgentKit-managed structure. It preserves user
+configuration and policy (including components, layers, rules, reminders, and
+budgets), project instructions and documentation, and local task state and
+validation receipts. It does not reapply a preset. If ownership or a lossless
+transformation cannot be proven, AgentKit reports a conflict and writes
+nothing.
+
+After upgrade, inspect the diff and run repository-specific tests plus the
+AgentKit verification commands:
+
+```bash
+git diff --check
+git diff
+agentkit doctor
+agentkit check
+# Run the project's normal test command, for example: pytest -q
+```
+
+See [ADR 0002](docs/decisions/0002-repository-upgrade-preserves-user-intent.md)
+for the migration safety contract and [CHANGELOG.md](CHANGELOG.md) for 0.2.0
+release notes.
+
+## Core Task Workflow
 
 Use the full lifecycle for substantial agent-led changes:
 

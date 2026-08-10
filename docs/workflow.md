@@ -33,15 +33,33 @@ Substantial concrete task
   -> completed, needs_work, or blocked with human question
 ```
 
+## Install The CLI
+
+AgentKit requires Python 3.11 or newer. The supported 0.2.0 release channel is
+the GitHub tag `v0.2.0`; the project does not claim a PyPI release. Install the
+tagged CLI with `uv`:
+
+```bash
+uv tool install "agentkit @ git+https://github.com/albert-zen/AgentKit.git@v0.2.0"
+agentkit --help
+```
+
+The tag is part of the direct-reference URL, so the installation is fixed to
+the 0.2.0 source instead of following the repository's default branch.
+
 ## 1. Repository Initialization
 
 Initialization happens at the repository level.
 
-The command is:
+For a new project that wants the versioned recommended lifecycle policy, use:
 
 ```text
-agentkit init
+agentkit init --preset recommended-v1
 ```
+
+This is an explicit policy choice: it materializes inspectable rule and
+reminder values in `agentkit.yml`. Plain `agentkit init` adopts AgentKit without
+selecting that preset.
 
 The purpose of `init` is to tell the agent:
 
@@ -90,7 +108,11 @@ After initialization, `agentkit doctor` should report which maintainability surf
 ### Existing Repository Upgrade
 
 Installing a newer AgentKit package is not initialization and does not change
-repository policy. For an existing repository:
+repository policy. Update the CLI first, then migrate each existing repository:
+
+```bash
+uv tool install --force "agentkit @ git+https://github.com/albert-zen/AgentKit.git@v0.2.0"
+```
 
 ```text
 agentkit doctor
@@ -104,6 +126,23 @@ Dry-run is byte-read-only. Apply migrates only proven AgentKit-managed
 structure, succeeds without changes when current, and rolls back a partial
 multi-file failure. `init --preset` remains an explicit policy import and must
 not be substituted for upgrade.
+
+AgentKit-managed structure means the versioned repository envelope, not the
+repository's own intent. Upgrade preserves user configuration and rules,
+project documentation and instructions, and `.agentkit` task state and
+receipts. When ownership or a lossless edit cannot be proven, a conflict causes
+zero writes.
+
+After applying an upgrade, inspect the diff and verify both AgentKit and the
+project:
+
+```text
+git diff --check
+git diff
+agentkit doctor
+agentkit check
+<project test command>
+```
 
 ## 2. Task Start
 

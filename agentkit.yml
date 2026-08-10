@@ -89,6 +89,7 @@ components:
     code:
       - docs/**
       - README.md
+      - CHANGELOG.md
       - AGENTS.md
     docs:
       - docs/design.md
