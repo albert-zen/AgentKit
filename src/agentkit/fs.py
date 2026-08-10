@@ -24,7 +24,16 @@ def expand_patterns(repo: Path, patterns: tuple[str, ...] | list[str]) -> list[P
     paths: list[Path] = []
     for pattern in patterns:
         normalized = pattern.replace("\\", "/")
-        if any(char in normalized for char in "*?["):
+        if normalized.endswith("/**"):
+            base_pattern = normalized[:-3]
+            if any(char in base_pattern for char in "*?["):
+                roots = repo.glob(base_pattern)
+            else:
+                roots = [repo / base_pattern]
+            for root in roots:
+                if root.is_dir():
+                    paths.extend(child for child in root.rglob("*") if child.is_file())
+        elif any(char in normalized for char in "*?["):
             paths.extend(path for path in repo.glob(normalized) if path.is_file())
         else:
             path = repo / normalized
